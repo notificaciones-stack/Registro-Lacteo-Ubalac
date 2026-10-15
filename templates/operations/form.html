@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}<script src="{% static 'js/producer-form.js' %}" defer></script>{% endblock %}
+{% block title %}{{ title }} · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ title }}</h1><p>Complete los campos obligatorios y revise la información antes de guardar.</p></div></div>
+<section class="panel panel-narrow">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="obligatorio">*</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="help-text">{{ field.help_text }}</div>{% endif %}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    {% if form.fiscal_category %}<p class="help-text">Cuantías menores permite omitir tipo y número de documento. Documento soporte y facturación electrónica mantienen documento obligatorio. Seleccione los productos y asigne el precio por litro de cada uno. Clasificar al proveedor no emite documentos fiscales.</p>{% endif %}
+    <div class="actions">
+      <a class="button button-secondary" href="{{ cancel_url }}">Cancelar</a>
+      <button class="button button-primary" type="submit">Guardar</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+

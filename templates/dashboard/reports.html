@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load l10n %}
+{% block title %}Informes · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="module-title">{% include "includes/module_icon.html" with icon="reports" tone="blue" %}<div><span class="eyebrow">ANÁLISIS OPERATIVO</span><h1>Informes de recolección</h1><p>Los recorridos validados usan litros reales de báscula; los pendientes conservan el dato operativo.</p></div></div>
+  {% if not form.errors %}<a class="button button-primary" href="{% url 'dashboard:report_export' %}{% if query_string %}?{{ query_string }}{% endif %}">Descargar informe Excel</a>{% endif %}
+</div>
+<div class="report-layout">
+  <aside class="report-sidebar" aria-label="Filtros de informes">
+    <details class="report-filter-panel" open>
+      <summary><span>Filtros del informe</span><span class="filter-summary-hint">Mostrar / ocultar</span></summary>
+      <div class="report-sidebar-body">
+        <p class="help-text">Seleccione las fechas de inicio y fin. Al abrir, se muestra desde el primer día del mes hasta hoy.</p>
+        <form method="get" class="report-filters">
+          {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+          {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+          <div class="actions"><button class="button button-primary" type="submit">Aplicar filtros</button><a class="button button-secondary" href="{% url 'dashboard:reports' %}">Restablecer</a></div>
+        </form>
+        <p class="help-text">Las dos fechas son obligatorias. El valor real de báscula se distribuye proporcionalmente entre los recibidos del recorrido, sin modificar su dato original.</p>
+      </div>
+    </details>
+  </aside>
+  <div class="report-main">
+  {% if not form.errors %}
+    {% include "operations/financial_summary.html" %}
+    <div class="report-period">Resultados del <strong>{{ start|date:"d/m/Y" }}</strong> al <strong>{{ end|date:"d/m/Y" }}</strong> · <a href="{% url 'operations:trip_list' %}">Ver recorridos</a></div>
+    <section class="report-kpis" aria-label="Indicadores del periodo">
+      <article class="metric"><span>Litros reales para informes</span><strong>{{ total_liters|floatformat:2 }}</strong></article>
+      <article class="metric"><span>Litros operativos originales</span><strong>{{ operational_liters|floatformat:2 }}</strong></article>
+      <article class="metric"><span>Varianza de báscula</span><strong>{{ total_variance|floatformat:2 }} L</strong><small>{{ weighbridge_count }} validaciones</small></article>
+      <article class="metric"><span>Recibidos confirmados</span><strong>{{ receipt_count }}</strong></article>
+      <article class="metric"><span>Recorridos cerrados</span><strong>{{ completed_count }}</strong></article>
+      <article class="metric"><span>Mayor productor</span><strong class="metric-name">{{ top_producer.producer__name|default:"Sin registros" }}</strong></article>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><div><h2>Producción por día</h2><p class="help-text">La barra más larga equivale a {{ daily_max_liters|floatformat:2 }} L (máximo diario del periodo). Las demás se comparan con ese máximo.</p></div></div>
+      <div class="bar-chart" role="list" aria-label="Litros reales o pendientes por día">
+        {% for item in daily %}
+          <div class="bar-row" role="listitem">
+            <time datetime="{{ item.day|date:'Y-m-d' }}">{{ item.day|date:"d/m" }}</time>
+            <progress class="bar-progress" aria-label="{{ item.day|date:'d/m/Y' }}: {{ item.liters|floatformat:2 }} litros" max="{{ daily_max_liters|unlocalize }}" value="{{ item.liters|unlocalize }}">{{ item.bar_width }} %</progress>
+            <div class="bar-values"><strong>{{ item.liters|floatformat:2 }} L</strong><small>{{ item.period_share|floatformat:1 }} % del total · {{ item.bar_width }} % del máximo</small></div>
+          </div>
+        {% empty %}<p class="empty">No hay recolecciones para estos filtros.</p>{% endfor %}
+      </div>
+    </section>
+    <div class="report-data-grid">
+      <section class="panel"><div class="panel-header"><h2>Productores con más litros</h2></div><div class="table-wrap"><table><thead><tr><th>Productor</th><th>Recibidos</th><th>Litros informe</th></tr></thead><tbody>{% for item in producer_rank|slice:":12" %}<tr><td>{{ item.producer__name }}</td><td>{{ item.count }}</td><td><strong>{{ item.liters|floatformat:2 }}</strong></td></tr>{% empty %}<tr><td colspan="3" class="empty">Sin datos.</td></tr>{% endfor %}</tbody></table></div></section>
+      <section class="panel"><div class="panel-header"><h2>Litros por ruta</h2></div><div class="table-wrap"><table><thead><tr><th>Ruta</th><th>Recibidos</th><th>Litros</th></tr></thead><tbody>{% for item in route_rank %}<tr><td>{{ item.route__name|default:"Sin ruta" }}</td><td>{{ item.count }}</td><td>{{ item.liters|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Sin datos.</td></tr>{% endfor %}</tbody></table></div></section>
+    </div>
+    <section class="panel">
+      <div class="panel-header"><h2>Desempeño de conductores</h2><a href="{% url 'dashboard:reports' %}?date_from={{ today|date:'Y-m-d' }}&amp;date_to={{ today|date:'Y-m-d' }}">Ver hoy</a></div>
+      <p class="help-text">Cuenta recorridos cerrados en el rango, incluso si no hubo recibidos. Usa la fecha de cierre; para consultar una prueba hecha hoy, seleccione la fecha de hoy en ambos campos. Los recibidos históricos importados no crean recorridos.</p>
+      <div class="table-wrap"><table><thead><tr><th>Conductor</th><th>Recorridos</th><th>Promedio</th><th>Recorridos/hora</th></tr></thead><tbody>{% for item in driver_rank %}<tr><td>{{ item.name }}</td><td>{{ item.count }}</td><td>{{ item.average_minutes|floatformat:1 }} min</td><td>{{ item.routes_per_hour|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">No hay recorridos cerrados en este periodo. Compruebe el filtro de fechas y el cierre del recorrido.</td></tr>{% endfor %}</tbody></table></div>
+    </section>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

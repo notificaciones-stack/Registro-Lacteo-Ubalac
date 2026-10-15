@@ -1,0 +1,56 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Comprobante {{ receipt.internal_number }} · UBALAC</title>
+  <link rel="stylesheet" href="{% static 'css/voucher.css' %}">
+  <script src="{% static 'js/print-voucher.js' %}" defer></script>
+</head>
+<body class="paper-{{ paper_width }}">
+  <nav class="screen-actions" aria-label="Acciones del comprobante">
+    <a href="{% url 'operations:receipt_detail' receipt.pk %}">Volver al recibido</a>
+    <a href="?paper=58">Formato 58 mm</a>
+    <a href="?paper=80">Formato 80 mm</a>
+    <button type="button" data-print-voucher>Imprimir comprobante</button>
+  </nav>
+  <main class="ticket">
+    <header class="ticket-header">
+      <div class="ticket-brand">UBALAC</div>
+      <h1>Comprobante de recolección de {{ receipt.product.name|lower }}</h1>
+      <p>Copia para el proveedor · Formato {{ paper_width }} mm</p>
+    </header>
+    <section class="ticket-number"><span>Número</span><strong>{{ receipt.internal_number }}</strong></section>
+    {% if receipt.status == 'VOIDED' %}<div class="void-stamp">ANULADO</div>{% endif %}
+    <dl class="ticket-data">
+      <div><dt>Fecha y hora</dt><dd>{{ receipt.collected_at|date:"d/m/Y H:i" }}</dd></div>
+      <div><dt>Proveedor</dt><dd>{{ receipt.producer.name }}</dd></div>
+      <div><dt>Documento</dt><dd>{{ receipt.producer.get_document_type_display }} {{ receipt.producer.document_number }}</dd></div>
+      <div><dt>Finca</dt><dd>{{ receipt.producer.farm_name|default:"No registrada" }}</dd></div>
+      <div><dt>Municipio</dt><dd>{{ receipt.producer.municipality|default:"No registrado" }}</dd></div>
+      <div><dt>Vehículo</dt><dd>{{ receipt.vehicle.plate }}{% if receipt.vehicle.name %} · {{ receipt.vehicle.name }}{% endif %}</dd></div>
+      {% if receipt.route %}<div><dt>Ruta</dt><dd>{{ receipt.route.name }}</dd></div>{% endif %}
+      {% if receipt.producer.village %}<div><dt>Vereda</dt><dd>{{ receipt.producer.village }}</dd></div>{% endif %}
+      <div><dt>Recolector</dt><dd>{{ receipt.collected_by.get_full_name|default:receipt.collected_by.username }}</dd></div>
+    </dl>
+    <section class="liters-block"><span>Cantidad recogida</span><strong>{{ receipt.liters|floatformat:2 }} L</strong></section>
+    <p>Precio histórico COP/L: {{ receipt.unit_price|default_if_none:"Pendiente de valoración" }}. Consulte la liquidación del periodo para el detalle de descuentos.</p>
+    <section class="ticket-notes">
+      <strong>Observaciones</strong>
+      <p>{{ receipt.observations|default:"Sin observaciones" }}</p>
+      {% if receipt.status == 'VOIDED' %}<p><strong>Motivo de anulación:</strong> {{ receipt.void_reason }}</p>{% endif %}
+    </section>
+    <section class="signatures" aria-label="Firmas">
+      <div><span></span><p>Entrega / proveedor</p></div>
+      <div><span></span><p>Recolector</p></div>
+    </section>
+    <footer class="ticket-footer">
+      <p>Código de verificación</p>
+      <code>{{ receipt.external_id }}</code>
+      <p>Generado el {% now "d/m/Y H:i" %}</p>
+    </footer>
+  </main>
+</body>
+</html>

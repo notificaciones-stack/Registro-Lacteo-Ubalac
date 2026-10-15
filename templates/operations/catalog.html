@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="module-title">{% include "includes/module_icon.html" with icon="settings" tone="green" %}<div><h1>{{ title }}</h1><p>Configure los parámetros de compra. Los cambios aplican a nuevas capturas y conservan el historial.</p></div></div>
+  <a class="button button-primary" href="{% url create_route %}">{% if request.resolver_match.url_name == 'product_list' %}Nuevo producto{% else %}Nueva retención o impuesto{% endif %}</a>
+</div>
+<section class="panel admin-record-table" aria-label="{{ title }}">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Nombre</th><th>{% if request.resolver_match.url_name == 'product_list' %}Código{% else %}Tipo{% endif %}</th>{% if request.resolver_match.url_name != 'product_list' %}<th>Porcentaje</th>{% endif %}<th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>{% for item in items %}<tr>
+      <td class="record-description"><strong>{{ item.name }}</strong></td>
+      <td>{{ item.code }}{{ item.get_kind_display }}</td>
+      {% if request.resolver_match.url_name != 'product_list' %}<td>{{ item.rate|floatformat:2 }} %</td>{% endif %}
+      <td><span class="badge {% if item.active %}badge-success{% else %}badge-muted{% endif %}">{% if item.active %}Activo{% else %}Inactivo{% endif %}</span></td>
+      <td><a class="button button-secondary" href="{% url edit_route item.pk %}" aria-label="Editar {{ item.name }}">Editar</a></td>
+    </tr>{% empty %}<tr><td colspan="5" class="empty-state">Aún no hay parámetros. Use el botón superior para crear el primero.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

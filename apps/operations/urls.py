@@ -1,0 +1,62 @@
+from django.urls import path
+
+from . import views
+from . import extended_views as extra
+
+
+app_name = "operations"
+
+urlpatterns = [
+    path("productos/", extra.ProductListView.as_view(), name="product_list"),
+    path("productos/nuevo/", extra.ProductCreateView.as_view(), name="product_create"),
+    path("productos/<uuid:pk>/editar/", extra.ProductUpdateView.as_view(), name="product_update"),
+    path("retenciones/", extra.FiscalListView.as_view(), name="fiscal_list"),
+    path("retenciones/nueva/", extra.FiscalCreateView.as_view(), name="fiscal_create"),
+    path("retenciones/<uuid:pk>/editar/", extra.FiscalUpdateView.as_view(), name="fiscal_update"),
+    path("vehiculos/inspecciones/", extra.InspectionListView.as_view(), name="inspection_list"),
+    path("vehiculos/inspecciones/nueva/", extra.InspectionCreateView.as_view(), name="inspection_create"),
+    path("productores/<uuid:pk>/liquidacion/", extra.ProducerStatementView.as_view(), name="producer_statement"),
+    path("notificaciones/", extra.NotificationListView.as_view(), name="notification_list"),
+    path("conductores/acceso/", views.DriverModuleUnlockView.as_view(), name="driver_unlock"),
+    path("conductores/cerrar-acceso/", views.DriverModuleLockView.as_view(), name="driver_lock"),
+    path("conductores/", views.DriverListView.as_view(), name="driver_list"),
+    path("conductores/nuevo/", views.DriverCreateView.as_view(), name="driver_create"),
+    path("conductores/mi-configuracion/", views.DriverSelfView.as_view(), name="driver_self"),
+    path("conductores/<uuid:pk>/", views.DriverDetailView.as_view(), name="driver_detail"),
+    path("conductores/<uuid:pk>/configurar/", views.DriverConfigurationView.as_view(), name="driver_configure"),
+    path("conductores/<uuid:pk>/cambiar-clave/", views.DriverPasswordResetView.as_view(), name="driver_password_reset"),
+    path("recorridos/", views.TripListView.as_view(), name="trip_list"),
+    path("recorridos/abrir/", views.TripStartView.as_view(), name="trip_start"),
+    path("recorridos/<uuid:pk>/cerrar/", views.TripCloseView.as_view(), name="trip_close"),
+    path("recorridos/<uuid:pk>/reabrir/", views.TripReopenView.as_view(), name="trip_reopen"),
+    path("bascula/", views.WeighbridgeListView.as_view(), name="weighbridge_list"),
+    path("bascula/recorrido/<uuid:trip_id>/", views.WeighbridgeRecordView.as_view(), name="weighbridge_record"),
+    path("bascula/<uuid:pk>/validar/", views.WeighbridgeValidateView.as_view(), name="weighbridge_validate"),
+    path("bascula/<uuid:pk>/corregir/", views.WeighbridgeReopenView.as_view(), name="weighbridge_reopen"),
+    path("rutas/", views.RouteListView.as_view(), name="route_list"),
+    path("rutas/nueva/", views.RouteCreateView.as_view(), name="route_create"),
+    path("rutas/<uuid:pk>/editar/", views.RouteUpdateView.as_view(), name="route_update"),
+    path("rutas/<uuid:pk>/estado/", views.RouteToggleActiveView.as_view(), name="route_toggle"),
+    path("datos/<str:kind>/importar/", views.BulkImportView.as_view(), name="bulk_import"),
+    path("datos/<str:kind>/exportar/", views.BulkExportView.as_view(), name="bulk_export"),
+    path("productores/", views.ProducerListView.as_view(), name="producer_list"),
+    path("productores/nuevo/", views.ProducerCreateView.as_view(), name="producer_create"),
+    path("productores/<uuid:pk>/editar/", views.ProducerUpdateView.as_view(), name="producer_update"),
+    path("productores/<uuid:pk>/estado/", views.ProducerToggleActiveView.as_view(), name="producer_toggle"),
+    path("vehiculos/", views.VehicleListView.as_view(), name="vehicle_list"),
+    path("vehiculos/nuevo/", views.VehicleCreateView.as_view(), name="vehicle_create"),
+    path("vehiculos/<uuid:pk>/editar/", views.VehicleUpdateView.as_view(), name="vehicle_update"),
+    path("vehiculos/<uuid:pk>/estado/", views.VehicleToggleActiveView.as_view(), name="vehicle_toggle"),
+    path("recibidos/", views.ReceiptListView.as_view(), name="receipt_list"),
+    path("recibidos/nuevo/", views.ReceiptCreateView.as_view(), name="receipt_create"),
+    path("recibidos/alertas/", views.DuplicateReceiptAlertsView.as_view(), name="duplicate_alerts"),
+    path("recibidos/alertas/<uuid:trip_id>/<uuid:producer_id>/", views.DuplicateReceiptReviewView.as_view(), name="duplicate_review"),
+    path("recibidos/<uuid:pk>/", views.ReceiptDetailView.as_view(), name="receipt_detail"),
+    path(
+        "recibidos/<uuid:pk>/comprobante/",
+        views.ReceiptVoucherView.as_view(),
+        name="receipt_voucher",
+    ),
+    path("recibidos/<uuid:pk>/editar/", views.ReceiptUpdateView.as_view(), name="receipt_update"),
+    path("recibidos/<uuid:pk>/anular/", views.ReceiptVoidView.as_view(), name="receipt_void"),
+]

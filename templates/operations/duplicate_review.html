@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Revisar recibidos · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="module-title">
+    {% include "includes/module_icon.html" with icon="alerts" tone="alert" %}
+    <div><span class="eyebrow">DECISIÓN ADMINISTRATIVA</span><h1>{{ producer.name }}</h1><p>Compare los registros, seleccione el correcto y documente la decisión.</p></div>
+  </div>
+</div>
+
+<section class="review-summary" aria-label="Datos del grupo">
+  <div><span>Ruta</span><strong>{{ trip.route.name }}</strong></div>
+  <div><span>Inicio del recorrido</span><strong>{{ trip.started_at|date:"d/m/Y H:i" }}</strong></div>
+  <div><span>Registros encontrados</span><strong>{{ receipts|length }}</strong></div>
+</section>
+
+<section class="panel panel-narrow review-panel">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="review-section"><span class="review-step">1</span><div><h2>Elija el recibido válido</h2><p class="help-text">Solo este registro seguirá vigente y aparecerá en la aplicación del conductor después de sincronizar.</p></div></div>
+    <div class="field receipt-choice-list">{{ form.selected_id }}{{ form.selected_id.errors }}</div>
+    <div class="review-section"><span class="review-step">2</span><div><h2>Registre el motivo</h2><p class="help-text">Esta observación quedará vinculada a la auditoría de los recibidos anulados.</p></div></div>
+    <div class="field"><label for="{{ form.reason.id_for_label }}">Motivo para anular los demás</label>{{ form.reason }}{{ form.reason.errors }}</div>
+    <div class="review-notice"><strong>La información no se elimina.</strong><span>Se conservan consecutivo, litros, motivo, autor y fecha de anulación.</span></div>
+    <div class="actions"><button class="button button-primary" type="submit">Confirmar selección</button><a class="button button-secondary" href="{% url 'operations:duplicate_alerts' %}">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}

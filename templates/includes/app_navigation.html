@@ -1,0 +1,33 @@
+{% load static %}
+{% with current=request.resolver_match.url_name %}
+<nav class="side-navigation" aria-label="Módulos de UBALAC">
+  <div class="nav-group">
+    <span class="nav-group-title">Principal</span>
+    <a class="nav-item {% if current == 'index' %}is-active{% endif %}" href="{% url 'dashboard:index' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#dashboard"></use></svg></span><span><strong>Resumen</strong><small>Estado general</small></span></a>
+    <a class="nav-item {% if current == 'reports' or current == 'report_export' %}is-active{% endif %}" href="{% url 'dashboard:reports' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#reports"></use></svg></span><span><strong>Informes</strong><small>Análisis y Excel</small></span></a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-title">Operación</span>
+    <a class="nav-item {% if current == 'receipt_list' or current == 'receipt_create' or current == 'receipt_detail' or current == 'receipt_voucher' or current == 'receipt_update' or current == 'receipt_void' %}is-active{% endif %}" href="{% url 'operations:receipt_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#receipts"></use></svg></span><span><strong>Recibidos</strong><small>Leche y suero</small></span></a>
+    {% if user.can_manage_master_data %}<a class="nav-item nav-item-alert {% if current == 'duplicate_alerts' or current == 'duplicate_review' %}is-active{% endif %}" href="{% url 'operations:duplicate_alerts' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#alerts"></use></svg></span><span><strong>Alertas</strong><small>Registros repetidos</small></span></a>{% endif %}
+    {% if user.can_record_receipts %}<a class="nav-item {% if current == 'trip_list' or current == 'trip_start' or current == 'trip_reopen' %}is-active{% endif %}" href="{% url 'operations:trip_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#trips"></use></svg></span><span><strong>Recorridos</strong><small>Apertura y cierre</small></span></a>{% endif %}
+    {% if user.can_manage_weighbridge %}<a class="nav-item {% if current == 'weighbridge_list' or current == 'weighbridge_record' or current == 'weighbridge_reopen' %}is-active{% endif %}" href="{% url 'operations:weighbridge_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#scale"></use></svg></span><span><strong>Báscula</strong><small>Validación real</small></span></a>{% endif %}
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-title">Maestros</span>
+    <a class="nav-item {% if current == 'producer_list' or current == 'producer_create' or current == 'producer_update' %}is-active{% endif %}" href="{% url 'operations:producer_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#producers"></use></svg></span><span><strong>Productores</strong><small>Proveedores</small></span></a>
+    <a class="nav-item {% if current == 'route_list' or current == 'route_create' or current == 'route_update' %}is-active{% endif %}" href="{% url 'operations:route_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#routes"></use></svg></span><span><strong>Rutas</strong><small>Zonas de recolección</small></span></a>
+    <a class="nav-item {% if current == 'vehicle_list' or current == 'vehicle_create' or current == 'vehicle_update' %}is-active{% endif %}" href="{% url 'operations:vehicle_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#vehicles"></use></svg></span><span><strong>Vehículos</strong><small>Placas y capacidad</small></span></a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-title">Administración</span>
+    {% if user.is_superuser or user.role == 'ADMIN' %}
+    <a class="nav-item {% if current == 'product_list' or current == 'product_create' or current == 'product_update' %}is-active{% endif %}" href="{% url 'operations:product_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#receipts"></use></svg></span><span><strong>Productos</strong><small>Leche, suero y otros</small></span></a>
+    <a class="nav-item {% if current == 'fiscal_list' or current == 'fiscal_create' or current == 'fiscal_update' %}is-active{% endif %}" href="{% url 'operations:fiscal_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#settings"></use></svg></span><span><strong>Retenciones e impuestos</strong><small>Parámetros de compra</small></span></a>
+    <a class="nav-item {% if current == 'notification_list' %}is-active{% endif %}" href="{% url 'operations:notification_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#alerts"></use></svg></span><span><strong>Notificaciones</strong><small>Cola de correos</small></span></a>
+    {% endif %}
+    {% if user.can_record_receipts or user.can_manage_weighbridge %}<a class="nav-item {% if current == 'inspection_list' or current == 'inspection_create' %}is-active{% endif %}" href="{% url 'operations:inspection_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#vehicles"></use></svg></span><span><strong>Inspección vehicular</strong><small>Control preoperacional</small></span></a>{% endif %}
+    {% if user.can_manage_drivers %}<a class="nav-item {% if current == 'driver_list' or current == 'driver_create' or current == 'driver_detail' or current == 'driver_configure' or current == 'driver_password_reset' %}is-active{% endif %}" href="{% url 'operations:driver_list' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#drivers"></use></svg></span><span><strong>Conductores</strong><small>Acceso móvil</small></span></a>{% elif user.role == 'DRIVER' or user.role == 'COLLECTOR' %}<a class="nav-item {% if current == 'driver_self' %}is-active{% endif %}" href="{% url 'operations:driver_self' %}"><span class="nav-icon"><svg><use href="{% static 'icons/modules.svg' %}#settings"></use></svg></span><span><strong>Mi configuración</strong><small>Equipo y asignaciones</small></span></a>{% endif %}
+  </div>
+</nav>
+{% endwith %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Configurar conductor · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><span class="eyebrow">PARAMETRIZACIÓN MÓVIL</span><h1>Configurar a {{ driver.get_full_name|default:driver.username }}</h1><p>Las asignaciones guardadas determinan las opciones disponibles en la app móvil y al abrir un recorrido.</p></div></div>
+<div class="panel"><p>¿Necesita un registro nuevo? <a href="{% url 'operations:route_create' %}">Crear ruta</a> · <a href="{% url 'operations:producer_create' %}">Crear productor</a> · <a href="{% url 'operations:vehicle_create' %}">Crear vehículo</a>. Después regrese a esta ficha para asignarlo.</p></div>
+<form method="post" class="panel" data-confirm-driver>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="driver-form-grid">{% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<small class="help-text">{{ field.help_text }}</small>{% endif %}</div>{% endfor %}</div>
+  <p class="help-text">El usuario se edita aquí y la contraseña se puede <a href="{% url 'operations:driver_password_reset' driver.pk %}">restablecer desde este módulo</a>. El ID de equipo se configura aquí; si se informa, la API exigirá ese ID en cada solicitud móvil.</p>
+  <div class="actions"><button class="button button-primary" type="submit">Guardar configuración</button><a class="button button-secondary" href="{% url 'operations:driver_detail' driver.pk %}">Cancelar</a></div>
+</form>
+{% include "operations/includes/driver_confirm.html" %}
+<script src="{% static 'js/driver-confirm.js' %}" defer></script>
+{% endblock %}

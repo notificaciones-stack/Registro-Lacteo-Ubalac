@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Báscula · UBALAC{% endblock %}
+{% block content %}
+{% include "operations/product_filter.html" %}
+<section class="page-header">
+  <div class="module-title">{% include "includes/module_icon.html" with icon="scale" tone="navy" %}<div><p class="eyebrow">LABORATORIO</p><h1>Cierre real de báscula</h1><p>Recorridos cerrados pendientes o validados por laboratorio.</p></div></div>
+</section>
+<section class="panel">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Cierre</th><th>Ruta</th><th>Vehículo</th><th>Conductor</th><th>Estado</th><th>Litros reales</th><th>Varianza</th><th></th></tr></thead>
+    <tbody>{% for trip in trips %}
+      <tr>
+        <td>{{ trip.ended_at|date:"d/m/Y H:i" }}</td><td>{{ trip.route.name }}</td><td>{{ trip.vehicle.plate }}</td><td>{{ trip.driver.get_full_name|default:trip.driver.username }}</td>
+        <td>{% if trip.weighbridge_record %}<span class="badge {% if trip.weighbridge_record.status == 'VALIDATED' %}badge-success{% else %}badge-warning{% endif %}">{{ trip.weighbridge_record.get_status_display }}</span>{% else %}<span class="badge badge-warning">Sin registrar</span>{% endif %}</td>
+        <td>{% if trip.weighbridge_record.actual_liters != None %}{{ trip.weighbridge_record.actual_liters|floatformat:2 }} L{% else %}—{% endif %}</td>
+        <td>{% if trip.weighbridge_record.variance_liters != None %}{{ trip.weighbridge_record.variance_liters|floatformat:2 }} L · {{ trip.weighbridge_record.get_result_display }}{% else %}—{% endif %}</td>
+        <td><a class="button button-secondary" href="{% url 'operations:weighbridge_record' trip.pk %}">{% if trip.weighbridge_record %}Ver registro{% else %}Registrar{% endif %}</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="8" class="empty">No hay recorridos cerrados.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

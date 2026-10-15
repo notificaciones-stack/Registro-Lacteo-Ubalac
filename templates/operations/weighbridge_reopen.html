@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Corregir báscula · UBALAC{% endblock %}
+{% block content %}
+<section class="page-header"><div><p class="eyebrow">CONTROL DE CAMBIOS</p><h1>Habilitar corrección de báscula</h1><p>{{ record.trip.route.name }} · {{ record.trip.vehicle.plate }}</p></div></section>
+<section class="panel form-panel"><div class="message message-warning">La validación actual seguirá en el historial. La modificación deberá guardarse y validarse nuevamente.</div><form method="post">{% csrf_token %}{{ form.non_field_errors }}<div class="form-field"><label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>{{ form.reason }}{{ form.reason.errors }}</div><div class="form-actions"><button class="button button-primary" type="submit">Habilitar corrección</button><a class="button button-secondary" href="{% url 'operations:weighbridge_record' record.trip_id %}">Cancelar</a></div></form></section>
+{% endblock %}

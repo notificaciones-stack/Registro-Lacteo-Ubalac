@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Resumen operativo · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="module-title">{% include "includes/module_icon.html" with icon="dashboard" tone="blue" %}<div><span class="eyebrow">CENTRO DE CONTROL</span><h1>Resumen operativo</h1><p>Los indicadores usan los litros reales cuando laboratorio ya validó la báscula.</p></div></div>
+  <div class="page-actions"><a class="button button-secondary" href="{% url 'dashboard:reports' %}">Explorar informes</a>{% if user.can_record_receipts %}<a class="button button-secondary" href="{% url 'operations:trip_list' %}">Mis recorridos</a><a class="button button-primary" href="{% url 'operations:receipt_create' %}">Nuevo recibido</a>{% endif %}</div>
+</div>
+
+<section class="panel"><form method="get"><label for="dashboard-product">Producto</label><select id="dashboard-product" name="product" class="form-select"><option value="">Todos los productos</option>{% for p in products %}<option value="{{ p.pk }}" {% if selected_product.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select><label for="dashboard-producer">Proveedor</label><select name="producer" id="dashboard-producer" class="form-select"><option value="">Todos los proveedores</option>{% for p in producers %}<option value="{{ p.pk }}" {% if selected_producer.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select><button class="button button-secondary" type="submit">Filtrar</button></form></section>
+{% include "operations/financial_summary.html" %}
+<section class="module-card-grid" aria-label="Accesos rápidos">
+  <a class="module-card" href="{% url 'operations:receipt_list' %}">{% include "includes/module_icon.html" with icon="receipts" tone="green" %}<span><strong>Recibidos</strong><small>Consultar recolecciones</small></span></a>
+  <a class="module-card" href="{% url 'dashboard:reports' %}">{% include "includes/module_icon.html" with icon="reports" tone="blue" %}<span><strong>Informes</strong><small>Indicadores y filtros</small></span></a>
+  <a class="module-card" href="{% url 'operations:producer_list' %}">{% include "includes/module_icon.html" with icon="producers" tone="amber" %}<span><strong>Productores</strong><small>Administrar proveedores</small></span></a>
+  {% if user.can_record_receipts %}<a class="module-card" href="{% url 'operations:trip_list' %}">{% include "includes/module_icon.html" with icon="trips" tone="purple" %}<span><strong>Recorridos</strong><small>Abrir y cerrar rutas</small></span></a>{% endif %}
+  {% if user.can_manage_master_data %}<a class="module-card module-card-alert" href="{% url 'operations:duplicate_alerts' %}">{% include "includes/module_icon.html" with icon="alerts" tone="alert" %}<span><strong>Alertas</strong><small>Resolver duplicados</small></span></a>{% endif %}
+  {% if user.can_manage_weighbridge %}<a class="module-card" href="{% url 'operations:weighbridge_list' %}">{% include "includes/module_icon.html" with icon="scale" tone="navy" %}<span><strong>Báscula</strong><small>Validar litros reales</small></span></a>{% endif %}
+</section>
+
+<section class="metric-grid" aria-label="Indicadores principales">
+  <article class="metric"><span>Litros hoy</span><strong>{{ today_liters|floatformat:2 }}</strong></article>
+  <article class="metric"><span>Recibidos hoy</span><strong>{{ today_receipts }}</strong></article>
+  <article class="metric"><span>Litros del mes</span><strong>{{ month_liters|floatformat:2 }}</strong></article>
+  <article class="metric"><span>Recibidos del mes</span><strong>{{ month_receipts_count }}</strong></article>
+  <article class="metric"><span>Productores activos</span><strong>{{ active_producers }}</strong></article>
+  <article class="metric"><span>Vehículos activos</span><strong>{{ active_vehicles }}</strong></article>
+</section>
+
+<section class="panel dashboard-trip-panel">
+  <div class="panel-header"><div><h2>Recorridos recientes</h2><p class="help-text">{{ trips_closed_today }} cerrados hoy · {{ trips_open }} en curso</p></div><a href="{% url 'dashboard:reports' %}?date_from={{ today|date:'Y-m-d' }}&amp;date_to={{ today|date:'Y-m-d' }}">Analizar hoy</a></div>
+  <div class="table-wrap"><table><thead><tr><th>Ruta</th><th>Conductor</th><th>Vehículo</th><th>Inicio</th><th>Cierre</th></tr></thead><tbody>
+    {% for trip in recent_trips %}<tr><td>{{ trip.route.name }}</td><td>{{ trip.driver.get_full_name|default:trip.driver.username }}</td><td>{{ trip.vehicle.plate }}</td><td>{{ trip.started_at|date:"d/m H:i" }}</td><td>{% if trip.ended_at %}{{ trip.ended_at|date:"d/m H:i" }}{% else %}<span class="badge badge-success">En curso</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Aún no hay recorridos. Abra uno desde Recorridos para medir duración.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<div class="content-grid">
+  <section class="panel">
+    <div class="panel-header"><h2>Últimos recibidos</h2><a href="{% url 'operations:receipt_list' %}">Ver todos</a></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Número</th><th>Productor</th><th>Vehículo</th><th>Litros</th><th>Fecha</th></tr></thead>
+        <tbody>
+          {% for receipt in recent_receipts %}
+            <tr>
+              <td><a href="{% url 'operations:receipt_detail' receipt.pk %}">{{ receipt.internal_number }}</a></td>
+              <td>{{ receipt.producer.name }}</td><td>{{ receipt.vehicle.plate }}</td>
+              <td>{{ receipt.liters|floatformat:2 }}</td><td>{{ receipt.collected_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+          {% empty %}<tr><td colspan="5" class="empty">Aún no hay recibidos registrados.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-header"><h2>Recolección por vehículo este mes</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Vehículo</th><th>Recibidos</th><th>Litros</th></tr></thead>
+        <tbody>
+          {% for item in vehicle_summary %}
+            <tr><td>{{ item.vehicle__plate }}</td><td>{{ item.receipt_count }}</td><td>{{ item.total_liters|floatformat:2 }}</td></tr>
+          {% empty %}<tr><td colspan="3" class="empty">Sin información para el mes actual.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

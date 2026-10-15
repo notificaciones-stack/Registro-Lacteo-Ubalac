@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Recibidos de productos · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="module-title">{% include "includes/module_icon.html" with icon="receipts" tone="green" %}<div><span class="eyebrow">OPERACIÓN DIARIA</span><h1>Recibidos de productos</h1><p>Registro de leche, suero y otros productos por proveedor.</p></div></div>
+  <div class="page-actions">{% if user.can_manage_master_data %}<a class="button button-secondary" href="{% url 'operations:duplicate_alerts' %}">Alertas de duplicados</a>{% endif %}<a class="button button-secondary" href="{% url 'operations:bulk_export' 'receipts' %}">Exportar Excel</a>{% if user.role == 'ADMIN' or user.is_superuser %}<a class="button button-secondary" href="{% url 'operations:bulk_import' 'receipts' %}">Importar Excel</a>{% endif %}{% if user.can_record_receipts %}<a class="button button-primary" href="{% url 'operations:receipt_create' %}">Nuevo recibido</a>{% endif %}</div>
+</div>
+<section class="panel">
+  <form class="search-bar" method="get">
+    <label class="sr-only" for="q">Buscar</label>
+    <input id="q" name="q" value="{{ query }}" placeholder="Número, productor, documento o vehículo">
+    <select name="status" aria-label="Estado">
+      <option value="">Todos los estados</option>
+      <option value="CONFIRMED" {% if request.GET.status == 'CONFIRMED' %}selected{% endif %}>Confirmados</option>
+      <option value="VOIDED" {% if request.GET.status == 'VOIDED' %}selected{% endif %}>Anulados</option>
+    </select>
+    <select name="product" aria-label="Producto"><option value="">Todos los productos</option>{% for p in products %}<option value="{{ p.code }}" {% if request.GET.product == p.code %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+    <button class="button button-secondary" type="submit">Buscar</button>
+  </form>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Número</th><th>Productor</th><th>Vehículo</th><th>Fecha</th><th>Litros</th><th>Estado</th><th>Comprobante</th></tr></thead>
+      <tbody>
+        {% for receipt in receipts %}
+          <tr>
+            <td><a href="{% url 'operations:receipt_detail' receipt.pk %}">{{ receipt.internal_number }}</a><br><small>{{ receipt.product.name }}</small></td>
+            <td>{{ receipt.producer.name }}</td>
+            <td>{{ receipt.vehicle.plate }}</td>
+            <td>{{ receipt.collected_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ receipt.liters|floatformat:2 }}</td>
+            <td><span class="badge {% if receipt.status == 'CONFIRMED' %}badge-success{% else %}badge-danger{% endif %}">{{ receipt.get_status_display }}</span></td>
+            <td><a href="{% url 'operations:receipt_voucher' receipt.pk %}">Ver / imprimir</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="empty">No se encontraron recibidos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ title }}</h1><p>Esta acción no elimina información y quedará registrada en auditoría.</p></div></div>
+<section class="panel panel-narrow"><p>Registro: <strong>{{ object }}</strong></p><form method="post" novalidate>{% csrf_token %}{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}<div class="field"><label for="{{ form.reason.id_for_label }}">Motivo de anulación</label>{{ form.reason }}{{ form.reason.errors }}</div><div class="actions"><button class="button button-danger" type="submit">Confirmar anulación</button></div></form></section>
+{% endblock %}
+

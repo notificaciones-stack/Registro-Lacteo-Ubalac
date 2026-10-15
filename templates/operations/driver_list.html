@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Conductores · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div class="module-title">{% include "includes/module_icon.html" with icon="drivers" tone="purple" %}<div><span class="eyebrow">PARAMETRIZACIÓN MÓVIL</span><h1>Conductores</h1><p>Datos de acceso, equipo, rutas, placas y productores asignados.</p></div></div><div class="page-actions"><a class="button button-primary" href="{% url 'operations:driver_create' %}">Nuevo conductor</a><form method="post" action="{% url 'operations:driver_lock' %}">{% csrf_token %}<button class="button button-secondary" type="submit">Bloquear módulo</button></form></div></div>
+<section class="panel">
+  <form class="search-bar" method="get"><input name="q" value="{{ request.GET.q }}" placeholder="Buscar por nombre o usuario" aria-label="Buscar conductor"><button class="button button-primary">Buscar</button></form>
+  <div class="table-wrap"><table><thead><tr><th>Conductor</th><th>Usuario</th><th>Equipo</th><th>Rutas</th><th>Placas</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+    {% for driver in drivers %}<tr><td>{{ driver.get_full_name|default:driver.username }}</td><td>{{ driver.username }}</td><td>{% if driver.driver_profile.device_id %}Configurado{% else %}Sin vincular{% endif %}</td><td>{% for route in driver.driver_profile.routes.all %}{{ route.name }}{% if not forloop.last %}, {% endif %}{% empty %}Sin asignar{% endfor %}</td><td>{% for vehicle in driver.assigned_vehicles.all %}{{ vehicle.plate }}{% if not forloop.last %}, {% endif %}{% empty %}Sin asignar{% endfor %}</td><td>{% if driver.is_active %}<span class="badge badge-success">Activo</span>{% else %}<span class="badge badge-muted">Inactivo</span>{% endif %}</td><td><a href="{% url 'operations:driver_detail' driver.pk %}">Ver ficha</a></td></tr>
+    {% empty %}<tr><td class="empty" colspan="7">No hay conductores. Use «Nuevo conductor» para crear el primero.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

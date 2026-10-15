@@ -1,0 +1,6 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools-items %}
+  {% if bulk_can_import %}<li><a href="{{ bulk_import_url }}">Importar Excel</a></li>{% endif %}
+  <li><a href="{{ bulk_export_url }}">Exportar Excel</a></li>
+  {{ block.super }}
+{% endblock %}

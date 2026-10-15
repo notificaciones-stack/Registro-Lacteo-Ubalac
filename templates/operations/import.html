@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Importar {{ kind }} · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><span class="eyebrow">GESTIÓN DE DATOS</span><h1>Importar {{ sheet }}</h1><p>Seleccione un archivo Excel con la hoja «{{ sheet }}». Límite: 5 MB y 5000 filas.</p></div><a class="button button-secondary" href="{{ return_url }}">Volver</a></div>
+<section class="panel panel-narrow">
+  <p>Se validan las filas antes de guardar. Si hay errores, corrija el archivo y vuelva a subirlo; no se guardan filas parciales.</p>
+  {% if kind == 'producers' %}<p>Descargue la exportación de Productores para obtener los encabezados vigentes: clasificación, productos habilitados, precios COP/L por producto, retenciones e ID. Cuantías menores permite omitir documento. Para actualizar un proveedor sin documento use el ID exportado.</p><a class="button button-secondary" href="{% url 'operations:bulk_export' 'producers' %}">Descargar plantilla vigente</a>{% endif %}
+  {% if kind == 'routes' %}<p>Puede usar una hoja «Rutas» con columnas Ruta y Descripción, o extraer las rutas de la columna Ruta de la hoja Vehículos. Los nombres repetidos se consolidan.</p>{% endif %}
+  {% if kind == 'receipts' %}<p>Se requieren productor identificado de forma única, placa, fecha AAAA-MM-DD, hora HH:MM e ID de recolección. La plantilla de ejemplo incluye registros con placa u hora incompletas que necesitan corrección antes de importarse.</p>{% endif %}
+  {% if import_errors %}<div class="form-errors" role="alert"><strong>Revise estas filas:</strong><ul>{% for error in import_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.non_field_errors }}<div class="field">{{ form.file.label_tag }}{{ form.file }}{{ form.file.errors }}</div><div class="actions"><button class="button button-primary" type="submit">Validar e importar</button><a class="button button-secondary" href="{{ return_url }}">Cancelar</a></div></form>
+</section>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Vehículos · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div class="module-title">{% include "includes/module_icon.html" with icon="vehicles" tone="navy" %}<div><span class="eyebrow">CATÁLOGO OPERATIVO</span><h1>Vehículos</h1><p>Vehículos habilitados para la operación de recolección.</p></div></div><div class="page-actions"><a class="button button-secondary" href="{% url 'operations:bulk_export' 'vehicles' %}">Exportar Excel</a>{% if user.can_manage_master_data %}<a class="button button-secondary" href="{% url 'operations:bulk_import' 'vehicles' %}">Importar Excel</a><a class="button button-primary" href="{% url 'operations:vehicle_create' %}">Nuevo vehículo</a>{% endif %}</div></div>
+<section class="panel">
+  <form class="search-bar" method="get"><label class="sr-only" for="q">Buscar</label><input id="q" name="q" value="{{ query }}" placeholder="Placa o nombre"><button class="button button-secondary" type="submit">Buscar</button></form>
+  <div class="table-wrap"><table><thead><tr><th>Placa</th><th>Ruta</th><th>Conductor</th><th>Capacidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+    {% for vehicle in vehicles %}<tr><td>{{ vehicle.plate }}</td><td>{{ vehicle.route|default:"—" }}</td><td>{{ vehicle.driver_name|default:"—" }}</td><td>{% if vehicle.capacity_liters %}{{ vehicle.capacity_liters|floatformat:2 }} L{% else %}—{% endif %}</td><td><span class="badge {% if vehicle.active %}badge-success{% else %}badge-muted{% endif %}">{% if vehicle.active %}Activo{% else %}Inactivo{% endif %}</span></td><td class="row-actions">{% if user.can_manage_master_data %}<a href="{% url 'operations:vehicle_update' vehicle.pk %}">Editar</a><form method="post" action="{% url 'operations:vehicle_toggle' vehicle.pk %}">{% csrf_token %}<button class="link-button" type="submit">{% if vehicle.active %}Desactivar{% else %}Activar{% endif %}</button></form>{% else %}—{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No se encontraron vehículos.</td></tr>{% endfor %}
+  </tbody></table></div>{% include "includes/pagination.html" %}
+</section>
+{% endblock %}

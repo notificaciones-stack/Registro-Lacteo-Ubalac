@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Acceso a conductores · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><span class="eyebrow">PARAMETRIZACIÓN MÓVIL</span><h1>Acceso a conductores</h1><p>La clave adicional se establece y cambia exclusivamente en el panel admin.</p></div></div>
+<section class="panel panel-narrow">
+  {% if configured %}
+    <form method="post">{% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="field"><label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>{{ form.password }}{{ form.password.errors }}</div>
+      <button class="button button-primary" type="submit">Entrar al módulo</button>
+    </form>
+    <p class="help-text">El acceso permanece desbloqueado durante 30 minutos o hasta que cierre la sesión.</p>
+  {% else %}
+    <p>La clave de este módulo aún no está configurada.</p>
+    <a class="button button-primary" href="{% url 'admin:operations_drivermodulesecurity_add' %}">Configurar clave en admin</a>
+  {% endif %}
+</section>
+{% endblock %}

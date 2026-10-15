@@ -1,0 +1,17 @@
+/* Scoped to Django admin; do not load the platform's app.css here. */
+#content, #content-main, #changelist, #changelist .changelist-form-container { min-width: 0; }
+#changelist .results { max-width: 100%; overflow-x: auto; }
+.object-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.change-list .object-tools { float: none; margin: 0 0 1rem; padding: 0; }
+.object-tools li { float: none; margin: 0; }
+.object-tools a { white-space: normal; }
+.form-row .assignment-checkboxes { display: grid; gap: .4rem; max-width: 38rem; max-height: 18rem; overflow: auto; padding: .65rem; border: 1px solid var(--border-color); border-radius: 6px; }
+.form-row .assignment-checkboxes label { float: none; display: flex; align-items: center; gap: .6rem; width: auto; padding: .4rem; }
+.form-row .assignment-checkboxes input { flex: 0 0 auto; margin: 0; }
+@media (max-width: 767px) {
+  .object-tools { justify-content: flex-start; }
+  .object-tools li { width: auto; }
+  .form-row .assignment-checkboxes { max-width: 100%; }
+  .submit-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .submit-row input { max-width: 100%; white-space: normal; }
+}

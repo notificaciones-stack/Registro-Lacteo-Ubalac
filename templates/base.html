@@ -1,0 +1,52 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102f3d">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}UBALAC{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% if user.is_authenticated %}has-app-shell{% endif %}">
+  {% if user.is_authenticated %}
+    <header class="app-topbar">
+      <a class="brand" href="{% url 'dashboard:index' %}">
+        <span class="brand-mark">VT</span>
+        <span class="brand-copy"><strong>UBALAC</strong><small>Recepción de productos</small></span>
+      </a>
+      <details class="mobile-menu"><summary><svg aria-hidden="true"><use href="{% static 'icons/modules.svg' %}#menu"></use></svg><span>Menú</span></summary><div class="mobile-menu-panel">{% include "includes/app_navigation.html" %}</div></details>
+      <div class="user-menu">
+        <span class="user-identity"><span class="user-avatar">{{ user.username|first|upper }}</span><span><strong>{{ user.get_full_name|default:user.username }}</strong><small>{{ user.get_role_display }}</small></span></span>
+        <a class="topbar-action" href="{% url 'accounts:password_change' %}"><svg aria-hidden="true"><use href="{% static 'icons/modules.svg' %}#key"></use></svg><span>Cambiar clave</span></a>
+        <form method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button class="topbar-action" type="submit"><svg aria-hidden="true"><use href="{% static 'icons/modules.svg' %}#logout"></use></svg><span>Salir</span></button>
+        </form>
+      </div>
+    </header>
+    <div class="app-frame">
+      <aside class="app-sidebar"><div class="sidebar-scroll">{% include "includes/app_navigation.html" %}</div><div class="sidebar-footer"><span class="status-dot"></span><span>Sistema operativo</span></div></aside>
+      <div class="app-workspace">
+  {% endif %}
+
+  <main class="page-shell {% if not user.is_authenticated %}auth-shell{% endif %}">
+    {% if messages %}
+      <div class="messages" aria-live="polite">
+        {% for message in messages %}
+          <div class="message message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if user.is_authenticated %}
+    <footer class="footer">VillaTech · Sistema de recepción de productos UBALAC</footer>
+      </div>
+    </div>
+  {% endif %}
+</body>
+</html>

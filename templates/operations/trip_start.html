@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Abrir recorrido · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><span class="eyebrow">OPERACIÓN EN CAMPO</span><h1>Abrir recorrido</h1><p>Elija ruta y vehículo. Su usuario y la hora de inicio se registran automáticamente.</p></div></div>
+<section class="panel panel-narrow"><form method="post">{% csrf_token %}<div class="form-errors">{{ form.non_field_errors }}</div>{% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}<div class="actions"><button type="submit" class="button button-primary">Iniciar ruta</button><a class="button button-secondary" href="{% url 'operations:trip_list' %}">Cancelar</a></div></form><p class="help-text">Si no aparece su vehículo, solicite al administrador que lo asigne a su usuario.</p></section>
+{% endblock %}

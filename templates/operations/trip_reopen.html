@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Reabrir recorrido · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><span class="eyebrow">CONTROL DE RECORRIDOS</span><h1>Reabrir recorrido</h1><p>{{ trip.route.name }} · {{ trip.vehicle.plate }} · {{ trip.driver.get_full_name|default:trip.driver.username }}</p></div></div>
+<section class="panel panel-narrow"><p>La reapertura solo está disponible durante el mismo día y antes de las 23:59. El conductor deberá sincronizar para continuar la captura.</p><form method="post" novalidate>{% csrf_token %}{{ form.non_field_errors }}<div class="field"><label for="{{ form.reason.id_for_label }}">Motivo de la reapertura</label>{{ form.reason }}{{ form.reason.errors }}</div><div class="actions"><button class="button button-primary" type="submit">Confirmar reapertura</button><a class="button button-secondary" href="{% url 'operations:trip_list' %}">Cancelar</a></div></form></section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Productores · UBALAC{% endblock %}
+{% block content %}
+{% include "operations/product_filter.html" %}
+<div class="page-header">
+  <div class="module-title">{% include "includes/module_icon.html" with icon="producers" tone="amber" %}<div><span class="eyebrow">CATÁLOGO OPERATIVO</span><h1>Productores</h1><p>Proveedores habilitados para el registro de recibidos.</p></div></div>
+  <div class="page-actions"><a class="button button-secondary" href="{% url 'operations:bulk_export' 'producers' %}">Exportar Excel</a>{% if user.can_manage_master_data %}<a class="button button-secondary" href="{% url 'operations:bulk_import' 'producers' %}">Importar Excel</a><a class="button button-primary" href="{% url 'operations:producer_create' %}">Nuevo productor</a>{% endif %}</div>
+</div>
+<section class="panel">
+  <form class="search-bar" method="get"><label class="sr-only" for="q">Buscar</label><input id="q" name="q" value="{{ query }}" placeholder="Nombre, documento, finca o municipio"><button class="button button-secondary" type="submit">Buscar</button></form>
+  <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Documento</th><th>Finca</th><th>Municipio / vereda</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+    {% for producer in producers %}<tr><td><a href="{% url 'operations:producer_statement' producer.pk %}">{{ producer.name }}</a><br><small>{{ producer.get_fiscal_category_display }}</small></td><td>{{ producer.get_document_type_display }} {{ producer.document_number }}</td><td>{{ producer.farm_name|default:"—" }}{% for price in producer.product_prices.all %}<br><small>{{ price.product.name }}: ${{ price.unit_price|default_if_none:'Pendiente' }} /L</small>{% endfor %}</td><td>{{ producer.municipality|default:"—" }}{% if producer.village %}<br><small class="muted">{{ producer.village }}</small>{% endif %}</td><td><span class="badge {% if producer.active %}badge-success{% else %}badge-muted{% endif %}">{% if producer.active %}Activo{% else %}Inactivo{% endif %}</span></td><td class="row-actions">{% if user.can_manage_master_data %}<a href="{% url 'operations:producer_update' producer.pk %}">Editar</a><form method="post" action="{% url 'operations:producer_toggle' producer.pk %}">{% csrf_token %}<button class="link-button" type="submit">{% if producer.active %}Desactivar{% else %}Activar{% endif %}</button></form>{% else %}—{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No se encontraron productores.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% include "includes/pagination.html" %}
+</section>
+{% endblock %}

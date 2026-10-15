@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión · UBALAC{% endblock %}
+{% block content %}
+<section class="auth-card">
+  <div class="auth-brand">VT</div>
+  <h1>Ingreso al sistema</h1>
+  <p class="muted">Registro y control de recolección de leche</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="field">
+      <label for="{{ form.username.id_for_label }}">Usuario</label>
+      {{ form.username }}
+      {{ form.username.errors }}
+    </div>
+    <div class="field">
+      <label for="{{ form.password.id_for_label }}">Contraseña</label>
+      {{ form.password }}
+      {{ form.password.errors }}
+    </div>
+    <button class="button button-primary button-block" type="submit">Iniciar sesión</button>
+  </form>
+</section>
+{% endblock %}
+

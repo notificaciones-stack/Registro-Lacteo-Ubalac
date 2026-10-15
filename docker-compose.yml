@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ubalac
+      POSTGRES_USER: ubalac
+      POSTGRES_PASSWORD: ubalac_local_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ubalac_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ubalac -d ubalac"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ubalac_postgres_data:
+

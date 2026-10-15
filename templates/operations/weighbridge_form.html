@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Registro de báscula · UBALAC{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div><p class="eyebrow">LABORATORIO · CIERRE FINAL</p><h1>{{ trip.route.name }} · {{ trip.vehicle.plate }} · {{ trip.product.name }}</h1><p>{{ trip.driver.get_full_name|default:trip.driver.username }} · Cerrado {{ trip.ended_at|date:"d/m/Y H:i" }}</p></div>
+  <a class="button button-secondary" href="{% url 'operations:weighbridge_list' %}">Volver</a>
+</section>
+
+{% if record and record.status == 'VALIDATED' %}
+<section class="report-kpis">
+  <article class="metric"><span>Peso neto</span><strong>{{ record.net_weight_kg|floatformat:2 }} kg</strong></article>
+  <article class="metric"><span>Litros registrados</span><strong>{{ record.collected_liters|floatformat:2 }} L</strong></article>
+  <article class="metric"><span>Litros reales</span><strong>{{ record.actual_liters|floatformat:2 }} L</strong></article>
+  <article class="metric"><span>{{ record.get_result_display }}</span><strong>{{ record.variance_liters|floatformat:2 }} L</strong><small>{{ record.variance_percent|floatformat:4 }} %</small></article>
+</section>
+<section class="panel">
+  <div class="panel-header"><div><h2>Validación #{{ revisions|length }}</h2><p class="help-text">Validado por {{ record.validated_by.get_full_name|default:record.validated_by.username }} el {{ record.validated_at|date:"d/m/Y H:i" }}. Estos litros ya alimentan los informes.</p></div></div>
+  <dl class="detail-grid">
+    <div><dt>Tiquete</dt><dd>{{ record.scale_ticket|default:"Sin número" }}</dd></div><div><dt>Peso bruto</dt><dd>{{ record.gross_weight_kg }} kg</dd></div><div><dt>Tara</dt><dd>{{ record.tare_weight_kg }} kg</dd></div><div><dt>Densidad</dt><dd>{{ record.density_kg_l }} kg/L</dd></div><div><dt>Tolerancia</dt><dd>{{ record.tolerance_percent }} %</dd></div><div><dt>Observaciones</dt><dd>{{ record.laboratory_notes|default:"Sin observaciones" }}</dd></div>
+  </dl>
+  {% if user.is_superuser or user.role == 'ADMIN' or user.role == 'SUPERVISOR' %}<a class="button button-secondary" href="{% url 'operations:weighbridge_reopen' record.pk %}">Habilitar corrección</a>{% endif %}
+</section>
+{% else %}
+<section class="panel form-panel">
+  <div class="panel-header"><div><h2>Datos del pesaje</h2><p class="help-text">Litros reales = (peso bruto − tara) ÷ densidad. Guarde primero y valide cuando los recibidos estén sincronizados y las alertas de duplicados resueltas.</p></div></div>
+  {% if record.correction_reason %}<div class="message message-warning"><strong>Corrección habilitada:</strong> {{ record.correction_reason }}</div>{% endif %}
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">{% for field in form %}<div class="form-field {% if field.name == 'laboratory_notes' %}form-field-wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div>
+    <div class="form-actions"><button class="button button-primary" type="submit">Guardar pesaje</button><a class="button button-secondary" href="{% url 'operations:weighbridge_list' %}">Cancelar</a></div>
+  </form>
+  {% if record %}<form method="post" action="{% url 'operations:weighbridge_validate' record.pk %}" class="validation-box">{% csrf_token %}<p><strong>Confirmación final:</strong> después de validar, laboratorio no podrá editar y los informes usarán el resultado real.</p><button class="button button-primary" type="submit">Validar e incorporar a informes</button></form>{% endif %}
+</section>
+{% endif %}
+
+{% if revisions %}<section class="panel"><div class="panel-header"><h2>Historial inalterable de validaciones</h2></div><div class="table-wrap"><table><thead><tr><th>Revisión</th><th>Fecha</th><th>Responsable</th><th>Litros registrados</th><th>Litros reales</th><th>Varianza</th><th>Resultado</th><th>Motivo de corrección</th></tr></thead><tbody>{% for revision in revisions %}<tr><td>#{{ revision.revision_number }}</td><td>{{ revision.validated_at|date:"d/m/Y H:i" }}</td><td>{{ revision.validated_by.get_full_name|default:revision.validated_by.username }}</td><td>{{ revision.collected_liters|floatformat:2 }}</td><td>{{ revision.actual_liters|floatformat:2 }}</td><td>{{ revision.variance_liters|floatformat:2 }} L</td><td>{{ revision.get_result_display }}</td><td>{{ revision.correction_reason|default:"Primera validación" }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+{% endblock %}

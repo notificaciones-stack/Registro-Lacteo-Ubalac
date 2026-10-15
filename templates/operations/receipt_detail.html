@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ receipt.internal_number }} · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ receipt.internal_number }}</h1><p>Detalle del recibido de leche.</p></div>
+  <div class="actions">
+    {% if user.can_manage_master_data and receipt.status == 'CONFIRMED' %}<a class="button button-secondary" href="{% url 'operations:receipt_update' receipt.pk %}">Editar</a>{% endif %}
+    <a class="button button-primary" href="{% url 'operations:receipt_voucher' receipt.pk %}">Comprobante del proveedor</a>
+  </div>
+</div>
+<section class="panel detail-grid">
+  <div><span>Producto</span><strong>{{ receipt.product.name }}</strong></div>
+  <div><span>Precio histórico COP/L</span><strong>{{ receipt.unit_price|default_if_none:"Pendiente de valoración" }}</strong></div>
+  <div><a href="{% url 'operations:producer_statement' receipt.producer_id %}">Liquidación y detalle del proveedor</a></div>
+  <div><span>Productor</span><strong>{{ receipt.producer.name }}</strong></div>
+  <div><span>Documento</span><strong>{{ receipt.producer.get_document_type_display }} {{ receipt.producer.document_number }}</strong></div>
+  <div><span>Finca</span><strong>{{ receipt.producer.farm_name|default:"No registrada" }}</strong></div>
+  <div><span>Municipio</span><strong>{{ receipt.producer.municipality|default:"No registrado" }}</strong></div>
+  <div><span>Vehículo</span><strong>{{ receipt.vehicle.plate }}</strong></div>
+  <div><span>Ruta</span><strong>{{ receipt.route|default:"No registrada" }}</strong></div>
+  <div><span>Vereda</span><strong>{{ receipt.producer.village|default:"No registrada" }}</strong></div>
+  <div><span>Registrado por</span><strong>{{ receipt.collected_by.get_full_name|default:receipt.collected_by.username }}</strong></div>
+  <div><span>Fecha de recolección</span><strong>{{ receipt.collected_at|date:"d/m/Y H:i" }}</strong></div>
+  <div><span>Litros recogidos</span><strong>{{ receipt.liters|floatformat:2 }} L</strong></div>
+  <div><span>Origen</span><strong>{{ receipt.get_source_display }}</strong></div>
+  {% if receipt.source_reference %}<div><span>ID de recolección</span><strong>{{ receipt.source_reference }}</strong></div>{% endif %}
+  {% if receipt.support_number %}<div><span>Número de soporte</span><strong>{{ receipt.support_number }}</strong></div>{% endif %}
+  <div><span>Estado</span><strong>{{ receipt.get_status_display }}</strong></div>
+  <div class="detail-wide"><span>Observaciones</span><strong>{{ receipt.observations|default:"Sin observaciones" }}</strong></div>
+  {% if receipt.status == 'VOIDED' %}<div class="detail-wide danger-text"><span>Motivo de anulación</span><strong>{{ receipt.void_reason }}</strong></div>{% endif %}
+</section>
+{% if user.can_manage_master_data and receipt.status == 'CONFIRMED' %}
+  <div class="danger-zone">
+    <h2>Anulación controlada</h2>
+    <p>La anulación conserva el registro y su trazabilidad.</p>
+    <a class="button button-danger" href="{% url 'operations:receipt_void' receipt.pk %}">Anular recibido</a>
+  </div>
+{% endif %}
+{% endblock %}

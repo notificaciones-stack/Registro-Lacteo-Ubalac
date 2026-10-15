@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Notificaciones · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div class="module-title">{% include "includes/module_icon.html" with icon="alerts" tone="amber" %}<div><h1>Notificaciones operativas</h1><p>Consulte el estado de envío y los intentos de cada aviso.</p></div></div></div>
+<section class="panel admin-record-table">
+  <p class="help-text">Los correos fallidos se conservan y el proceso programado los reintenta. No contienen contraseñas.</p>
+  <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Asunto</th><th>Destinatarios</th><th>Estado</th><th>Intentos</th></tr></thead><tbody>
+  {% for n in items %}<tr>
+    <td>{{ n.created_at|date:"d/m/Y H:i" }}</td><td class="record-description">{{ n.subject }}</td><td class="record-description">{{ n.recipients|join:", " }}</td>
+    <td class="record-description"><span class="badge {% if n.sent_at %}badge-success{% else %}badge-muted{% endif %}">{% if n.sent_at %}Enviado{% else %}Pendiente{% endif %}</span>{% if not n.sent_at and n.last_error %}<p class="help-text">{{ n.last_error }}</p>{% endif %}</td>
+    <td>{{ n.attempts }}</td>
+  </tr>{% empty %}<tr><td colspan="5" class="empty-state">No hay notificaciones registradas.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% include "includes/pagination.html" %}
+{% endblock %}

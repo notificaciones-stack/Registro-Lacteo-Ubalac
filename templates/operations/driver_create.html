@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Nuevo conductor · UBALAC{% endblock %}
+{% block content %}
+<div class="page-header"><div><span class="eyebrow">PARAMETRIZACIÓN MÓVIL</span><h1>Nuevo conductor</h1><p>Cree el acceso y asigne rutas, placas, equipo y productores en una sola ficha.</p></div></div>
+<div class="panel"><p>¿Necesita una nueva ruta, placa o productor? <a href="{% url 'operations:route_create' %}">Crear ruta</a> · <a href="{% url 'operations:vehicle_create' %}">Crear vehículo</a> · <a href="{% url 'operations:producer_create' %}">Crear productor</a>. Después regrese aquí para asignarlos.</p></div>
+<form method="post" class="panel" data-confirm-driver>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="driver-form-grid">{% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label><div class="{% if field.name == 'password1' or field.name == 'password2' %}password-control{% endif %}">{{ field }}{% if field.name == 'password1' or field.name == 'password2' %}<button class="button button-secondary password-toggle" type="button" data-password-toggle="{{ field.id_for_label }}" aria-controls="{{ field.id_for_label }}" aria-pressed="false">Mostrar</button>{% endif %}</div>{{ field.errors }}{% if field.help_text %}<small class="help-text">{{ field.help_text }}</small>{% endif %}</div>{% endfor %}</div>
+  <p class="help-text">Mínimo 6 caracteres. El acceso usa un hash; una copia cifrada permite consultarla únicamente en la ficha protegida. Antes de guardar verá un resumen de los cambios.</p>
+  <div class="actions"><button class="button button-primary" type="submit">Crear conductor</button><a class="button button-secondary" href="{% url 'operations:driver_list' %}">Cancelar</a></div>
+</form>
+{% include "operations/includes/driver_confirm.html" %}
+<script src="{% static 'js/password-visibility.js' %}" defer></script>
+<script src="{% static 'js/driver-confirm.js' %}" defer></script>
+{% endblock %}
