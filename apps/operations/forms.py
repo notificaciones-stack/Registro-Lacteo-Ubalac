@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+import json
 
 from django import forms
 from django.contrib.auth.password_validation import CommonPasswordValidator, MinimumLengthValidator, NumericPasswordValidator, UserAttributeSimilarityValidator, validate_password
@@ -26,13 +27,19 @@ class StyledModelForm(forms.ModelForm):
 
 class ProducerForm(StyledModelForm):
     class Media:
-        js = ("js/producer-form.js",)
+        js = ("js/producer-form.js", "js/assignment-defaults.js")
 
     products = forms.ModelMultipleChoiceField(label="Productos que entrega", queryset=CollectionProduct.objects.filter(active=True), widget=forms.CheckboxSelectMultiple)
     deductions = forms.ModelMultipleChoiceField(label="Retenciones e impuestos", queryset=FiscalParameter.objects.all(), required=False, widget=forms.CheckboxSelectMultiple)
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        from .assignment_defaults import assignment_catalog
+        self.fields["assigned_driver"].queryset = User.objects.filter(is_active=True, role__in=[User.Role.DRIVER, User.Role.COLLECTOR])
+        self.fields["assigned_route"].queryset = Route.objects.filter(active=True)
+        self.fields["assigned_vehicle"].queryset = Vehicle.objects.filter(active=True)
+        self.fields["assigned_driver"].widget.attrs["data-assignments"] = json.dumps(assignment_catalog())
+        self.fields["assigned_driver"].help_text = "Se completan las opciones únicas. Si hay varias rutas o placas, elija la correspondiente."
         self.fields["document_type"].required = False
         self.fields["document_number"].required = False
         self.can_set_fiscal = user is None or user.is_superuser or user.role == User.Role.ADMIN
@@ -70,8 +77,11 @@ class ProducerForm(StyledModelForm):
 
     class Meta:
         model = Producer
-        fields = ["fiscal_category", "document_type", "document_number", "name", "farm_name", "phone", "municipality", "village", "notes", "products", "deductions"]
+        fields = ["fiscal_category", "document_type", "document_number", "name", "farm_name", "phone", "municipality", "village", "notes", "assigned_driver", "assigned_route", "assigned_vehicle", "products", "deductions"]
         labels = {
+            "assigned_driver": "Conductor asignado",
+            "assigned_route": "Ruta asignada",
+            "assigned_vehicle": "Placa asignada",
             "fiscal_category": "Clasificación del proveedor",
             "document_type": "Tipo de documento",
             "document_number": "Número de documento",
@@ -121,6 +131,23 @@ class VehicleInspectionForm(StyledModelForm):
 
 
 class VehicleForm(StyledModelForm):
+    class Media:
+        js = ("js/assignment-defaults.js",)
+
+    def clean(self):
+        values = super().clean()
+        driver = values.get("driver")
+        if driver:
+            profile = getattr(driver, "driver_profile", None)
+            values["driver_name"] = driver.get_full_name() or driver.username
+            values["driver_document"] = profile.document_number if profile else ""
+            values["driver_phone"] = profile.phone if profile else ""
+            if not values.get("route"):
+                routes = assigned_routes(driver)
+                if routes.count() == 1:
+                    values["route"] = routes.first()
+        return values
+
     class Meta:
         model = Vehicle
         fields = ["plate", "route", "name", "driver", "driver_name", "driver_document", "driver_phone", "capacity_liters", "notes"]
@@ -140,6 +167,8 @@ class VehicleForm(StyledModelForm):
         super().__init__(*args, **kwargs)
         self.fields["route"].queryset = Route.objects.filter(active=True)
         self.fields["driver"].queryset = User.objects.filter(is_active=True, role__in=[User.Role.DRIVER, User.Role.COLLECTOR])
+        from .assignment_defaults import assignment_catalog
+        self.fields["driver"].widget.attrs["data-assignments"] = json.dumps(assignment_catalog())
 
 
 class StartTripForm(forms.Form):
@@ -230,7 +259,7 @@ class DriverConfigurationForm(StyledModelForm):
     class Meta:
         model = DriverProfile
         fields = ["first_name", "last_name", "username", "email", "document_number", "phone", "device_id", "routes", "vehicles", "producers", "products"]
-        labels = {"document_number": "Documento", "phone": "Teléfono", "device_id": "ID del equipo móvil", "routes": "Rutas asignadas", "producers": "Productores asignados (vacío = todos los activos)"}
+        labels = {"document_number": "Documento", "phone": "Teléfono", "device_id": "ID del equipo móvil", "routes": "Rutas asignadas", "producers": "Productores asignados (vacío = disponibles por ruta y conductor)"}
         widgets = {"products": forms.CheckboxSelectMultiple(attrs={"class": "assignment-checkboxes"}), "routes": forms.CheckboxSelectMultiple(attrs={"class": "assignment-checkboxes"}), "producers": forms.CheckboxSelectMultiple(attrs={"class": "assignment-checkboxes"})}
 
     def __init__(self, *args, **kwargs):
@@ -320,6 +349,9 @@ def validate_driver_password(password, user):
 
 
 class MilkReceiptForm(StyledModelForm):
+    class Media:
+        js = ("js/assignment-defaults.js",)
+
     product = forms.ModelChoiceField(label="Producto", queryset=CollectionProduct.objects.filter(active=True), required=False)
 
     def clean_product(self):
@@ -357,6 +389,7 @@ class MilkReceiptForm(StyledModelForm):
         self.fields["producer"].queryset = assigned_producers(user) if user else Producer.objects.filter(active=True)
         self.fields["product"].queryset = CollectionProduct.objects.filter(active=True)
         self.fields["product"].label = "Producto recibido"
+        self.fields["producer"].widget.attrs["data-producers"] = json.dumps([{"id": str(p.pk), "route": str(p.assigned_route_id or ""), "vehicle": str(p.assigned_vehicle_id or "")} for p in self.fields["producer"].queryset])
         self.fields["vehicle"].queryset = assigned_vehicles(user) if user else Vehicle.objects.filter(active=True)
         self.fields["route"].queryset = assigned_routes(user) if user else Route.objects.filter(active=True)
         self.fields["collected_at"].input_formats = ["%Y-%m-%dT%H:%M"]

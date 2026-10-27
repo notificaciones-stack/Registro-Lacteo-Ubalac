@@ -87,7 +87,7 @@ class BulkAdmin(admin.ModelAdmin):
 class ProducerAdmin(BulkAdmin):
     form = ProducerForm
     bulk_kind = "producers"
-    list_display = ("name", "document_type", "document_number", "farm_name", "municipality", "village", "active")
+    list_display = ("name", "document_type", "document_number", "farm_name", "municipality", "village", "assigned_driver", "assigned_route", "assigned_vehicle", "active")
     list_filter = ("active", "document_type", "municipality")
     search_fields = ("name", "farm_name", "document_number")
 

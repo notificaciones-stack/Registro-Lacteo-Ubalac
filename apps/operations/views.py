@@ -118,7 +118,7 @@ def save_driver_assignments(form, user):
     selected = set(form.cleaned_data["vehicles"].values_list("pk", flat=True))
     now = timezone.now()
     Vehicle.objects.filter(driver=user).exclude(pk__in=selected).update(driver=None, updated_at=now)
-    Vehicle.objects.filter(pk__in=selected).update(driver=user, updated_at=now)
+    Vehicle.objects.filter(pk__in=selected).update(driver=user, driver_name=user.get_full_name() or user.username, driver_document=profile.document_number, driver_phone=profile.phone, updated_at=now)
     return profile
 
 
@@ -432,7 +432,7 @@ class TripListView(RoleRequiredMixin, ListView):
         if not (self.request.user.is_superuser or self.request.user.role in MASTER_ROLES):
             qs = qs.filter(driver=self.request.user)
         if self.request.GET.get("product"):
-            qs = qs.filter(product__code=self.request.GET["product"])
+            qs = qs.filter(Q(receipts__product__code=self.request.GET["product"]) | Q(receipts__isnull=True, product__code=self.request.GET["product"])).distinct()
         return qs
 
     def get_context_data(self, **kwargs):
@@ -510,7 +510,7 @@ class WeighbridgeListView(RoleRequiredMixin, ListView):
             "route", "vehicle", "driver", "weighbridge_record", "weighbridge_record__validated_by"
         ).order_by("-ended_at")
         if self.request.GET.get("product"):
-            qs = qs.filter(product__code=self.request.GET["product"])
+            qs = qs.filter(Q(receipts__product__code=self.request.GET["product"]) | Q(receipts__isnull=True, product__code=self.request.GET["product"])).distinct()
         return qs
 
     def get_context_data(self, **kwargs):
@@ -531,7 +531,7 @@ class WeighbridgeRecordView(RoleRequiredMixin, FormView):
         return {**super().get_form_kwargs(), "instance": self.record or WeighbridgeRecord(trip=self.trip, created_by=self.request.user, updated_by=self.request.user)}
 
     def get_context_data(self, **kwargs):
-        return {**super().get_context_data(**kwargs), "trip": self.trip, "record": self.record, "revisions": self.record.revisions.select_related("validated_by") if self.record else []}
+        return {**super().get_context_data(**kwargs), "trip": self.trip, "record": self.record, "revisions": self.record.revisions.select_related("validated_by") if self.record else [], "received_products": list(self.trip.receipts.filter(status="CONFIRMED").order_by("product__name").values_list("product__name", flat=True).distinct())}
 
     def form_valid(self, form):
         try:
@@ -658,7 +658,7 @@ class DuplicateReceiptAlertsView(RoleRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["alerts"] = (MilkReceipt.objects.filter(trip__isnull=False, status=MilkReceipt.Status.CONFIRMED)
-            .values("trip_id", "producer_id", "producer__name", "trip__route__name", "trip__started_at")
+            .values("trip_id", "producer_id", "producer__name", "product_id", "product__name", "trip__route__name", "trip__started_at")
             .annotate(total=Count("id")).filter(total__gt=1).order_by("-total", "producer__name")[:100])
         return context
 
@@ -673,8 +673,18 @@ class DuplicateReceiptReviewView(RoleRequiredMixin, FormView):
         self.producer = get_object_or_404(Producer, pk=kwargs["producer_id"])
         return super().dispatch(request, *args, **kwargs)
 
+    def candidate_queryset(self):
+        qs = MilkReceipt.objects.filter(trip=self.trip, producer=self.producer, status=MilkReceipt.Status.CONFIRMED)
+        product = self.kwargs.get("product_id")
+        if product:
+            return qs.filter(product_id=product)
+        # Old links remain usable only for a single-product group.
+        if qs.values("product_id").distinct().count() > 1:
+            return qs.none()
+        return qs
+
     def candidates(self):
-        return list(MilkReceipt.objects.filter(trip=self.trip, producer=self.producer, status=MilkReceipt.Status.CONFIRMED).order_by("collected_at", "pk"))
+        return list(self.candidate_queryset().order_by("collected_at", "pk"))
 
     def get_form_kwargs(self):
         return {**super().get_form_kwargs(), "receipts": self.candidates()}
@@ -684,7 +694,7 @@ class DuplicateReceiptReviewView(RoleRequiredMixin, FormView):
 
     def form_valid(self, form):
         with transaction.atomic():
-            candidates = list(MilkReceipt.objects.select_for_update().filter(trip=self.trip, producer=self.producer, status=MilkReceipt.Status.CONFIRMED))
+            candidates = list(self.candidate_queryset().select_for_update())
             selected = form.cleaned_data["selected_id"]
             if len(candidates) < 2 or selected not in {str(item.pk) for item in candidates}:
                 form.add_error(None, "Los recibidos cambiaron. Actualice la página y revise de nuevo.")

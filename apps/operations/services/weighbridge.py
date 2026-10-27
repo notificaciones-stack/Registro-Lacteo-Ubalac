@@ -53,7 +53,7 @@ def validate_weighbridge(*, record, user, request=None):
     if locked.trip.ended_at is None:
         raise ValidationError("El recorrido debe estar cerrado.")
     receipts = MilkReceipt.objects.select_for_update().filter(trip=locked.trip, status=MilkReceipt.Status.CONFIRMED)
-    duplicates = receipts.values("producer_id").annotate(total=Count("id")).filter(total__gt=1)
+    duplicates = receipts.values("producer_id", "product_id").annotate(total=Count("id")).filter(total__gt=1)
     if duplicates.exists():
         raise ValidationError("Primero revise las alertas de recibidos repetidos de este recorrido.")
     collected = receipts.aggregate(total=Sum("liters"))["total"] or Decimal("0")

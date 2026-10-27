@@ -493,3 +493,6 @@ button, .button, a, input, select, textarea, summary { touch-action: manipulatio
   .mobile-menu-panel { max-height: calc(100dvh - 68px); }
   .side-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
+
+.inspection-issue { border-left: 5px solid #c26116; background: #fffaf3; }
+.inspection-issue .badge-danger { white-space: normal; }

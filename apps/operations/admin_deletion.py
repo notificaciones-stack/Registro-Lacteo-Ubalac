@@ -74,5 +74,5 @@ class SuperuserDeleteMixin:
 
 def install_admin_deletion(site):
     for model, model_admin in site._registry.items():
-        if model._meta.app_label in {"operations", "accounts", "auditlog"} and not isinstance(model_admin, SuperuserDeleteMixin):
+        if not isinstance(model_admin, SuperuserDeleteMixin):
             model_admin.__class__ = type(f"Superuser{model_admin.__class__.__name__}", (SuperuserDeleteMixin, model_admin.__class__), {})

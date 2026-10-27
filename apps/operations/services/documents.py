@@ -57,6 +57,9 @@ def create_receipt(*, user, request=None, external_id=None, **validated_data) ->
     price, adjustments = terms_at(producer, product, validated_data["collected_at"])
     validated_data["unit_price"], validated_data["adjustments"] = price, adjustments
     require_trip = not user.is_superuser and (user.role == "DRIVER" or (user.role == "COLLECTOR" and validated_data.get("source") == MilkReceipt.Source.MOBILE))
+    profile = getattr(user, "driver_profile", None)
+    if require_trip and profile and profile.products.exists() and not profile.products.filter(pk=product.pk).exists():
+        raise ValidationError("El producto no está habilitado para este conductor.")
     if require_trip and not assigned_producers(user).filter(pk=validated_data["producer"].pk).exists():
         raise ValidationError("El productor no está asignado a este conductor.")
     if validated_data.get("source", MilkReceipt.Source.WEB) != MilkReceipt.Source.IMPORT:

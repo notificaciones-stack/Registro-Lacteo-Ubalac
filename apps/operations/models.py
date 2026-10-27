@@ -45,6 +45,9 @@ class Producer(UUIDTimeStampedModel):
     active = models.BooleanField(default=True, db_index=True)
     products = models.ManyToManyField("CollectionProduct", through="ProducerProduct", related_name="producers")
     deductions = models.ManyToManyField("FiscalParameter", blank=True, related_name="producers")
+    assigned_driver = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="primary_producers")
+    assigned_route = models.ForeignKey("Route", null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_producers")
+    assigned_vehicle = models.ForeignKey("Vehicle", null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_producers")
 
     class Meta:
         ordering = ["name"]
@@ -63,6 +66,8 @@ class Producer(UUIDTimeStampedModel):
 
     def clean(self):
         self.document_type = (self.document_type or "").upper().strip()
+        from .assignment_defaults import complete_producer_assignment
+        complete_producer_assignment(self)
         self.document_number = "".join((self.document_number or "").split()).upper()
         if self.fiscal_category != self.FiscalCategory.SMALL:
             errors = {}
@@ -156,6 +161,13 @@ class Vehicle(UUIDTimeStampedModel):
 
     def save(self, *args, **kwargs):
         self.plate = "".join(self.plate.split()).upper()
+        if self.driver_id:
+            profile = getattr(self.driver, "driver_profile", None)
+            self.driver_name = self.driver.get_full_name() or self.driver.username
+            self.driver_document = profile.document_number if profile else ""
+            self.driver_phone = profile.phone if profile else ""
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"driver_name", "driver_document", "driver_phone"}
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -453,8 +465,6 @@ class MilkReceipt(UUIDTimeStampedModel):
             if self.vehicle_id and not self.vehicle.active:
                 errors["vehicle"] = "El vehículo seleccionado está inactivo."
         if self.trip_id:
-            if self.product_id != self.trip.product_id:
-                errors["product"] = "El producto debe coincidir con el recorrido."
             if self.vehicle_id != self.trip.vehicle_id:
                 errors["vehicle"] = "El vehículo debe coincidir con el recorrido asociado."
             if self.route_id != self.trip.route_id:

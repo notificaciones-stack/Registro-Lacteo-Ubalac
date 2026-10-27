@@ -25,7 +25,7 @@ from .documents import create_receipt
 SHEETS = {"routes": "Vehículos", "producers": "Productores", "vehicles": "Vehículos", "receipts": "Recolecciones"}
 HEADERS = {
     "routes": ["Ruta", "Descripción", "Estado"],
-    "producers": ["Tipo de documento", "Número de documento / NIT", "Nombre / Razón social", "Nombre de la finca", "Teléfono de contacto", "Municipio", "VEREDA", "Observaciones", "Estado", "Clasificación", "Productos (códigos separados por |)", "Retenciones (nombres separados por |)", "ID proveedor"],
+    "producers": ["Tipo de documento", "Número de documento / NIT", "Nombre / Razón social", "Nombre de la finca", "Teléfono de contacto", "Municipio", "VEREDA", "Observaciones", "Estado", "Clasificación", "Productos (códigos separados por |)", "Retenciones (nombres separados por |)", "ID proveedor", "Usuario conductor asignado", "Ruta asignada", "Placa asignada"],
     "vehicles": ["Nombre / Placa del vehículo", "Ruta", "Nombre del conductor", "Documento del conductor", "Teléfono del conductor", "Capacidad del tanque (litros)", "Observaciones", "Usuario conductor", "Nombre del vehículo", "Estado"],
     "receipts": ["RUTA", "ID / No. de recolección", "Productor", "Vehículo / Placa", "Fecha", "Hora", "Litros recogidos", "Estado de recepción", "Soporte", "Medio de pago", "Comprobante / No. soporte", "Observaciones", "Conductor del recorrido", "Producto", "Precio histórico COP/L"],
 }
@@ -82,6 +82,15 @@ def parse_row(kind, data):
         if not dtype and (category != "SMALL" or cell(get(0))):
             raise ValueError("Tipo de documento desconocido.")
         row = with_active({"fiscal_category": category, "document_type": dtype or "", "document_number": "".join((cell(get(1)) if category == "SMALL" else required(get(1), "el documento")).split()).upper(), "name": required(get(2), "el nombre"), "farm_name": cell(get(3)), "phone": cell(get(4)), "municipality": cell(get(5)), "village": cell(get(6)), "notes": cell(get(7))}, get(8))
+        for index, field, model, lookup in [(13, "assigned_driver", User, "username"), (14, "assigned_route", Route, "name"), (15, "assigned_vehicle", Vehicle, "plate")]:
+            if norm(HEADERS[kind][index]) in data:
+                value = cell(get(index))
+                obj = model.objects.filter(**{lookup + "__iexact": value}).first() if value else None
+                if value and (obj is None or not getattr(obj, "active", getattr(obj, "is_active", True))):
+                    raise ValueError(f"Asignación inexistente o inactiva: {value}.")
+                if field == "assigned_driver" and obj and obj.role not in {"DRIVER", "COLLECTOR"}:
+                    raise ValueError("El usuario debe ser conductor o recolector.")
+                row[field] = obj
         row["_provider_id"] = cell(get(12))
         row["_products"] = cell(get(10))
         row["_fiscal"] = cell(get(11)) if norm(HEADERS[kind][11]) in data else None
@@ -278,7 +287,7 @@ def export_workbook(kind):
         records = ([o.name, o.description, "Activo" if o.active else "Inactivo"] for o in Route.objects.all())
     elif kind == "producers":
         products = list(CollectionProduct.objects.all())
-        records = ([o.get_document_type_display(), o.document_number, o.name, o.farm_name, o.phone, o.municipality, o.village, o.notes, "Activo" if o.active else "Inactivo", o.get_fiscal_category_display(), "|".join(o.products.values_list("code", flat=True)), "|".join(o.deductions.values_list("name", flat=True)), str(o.pk), *[(o.product_prices.filter(product=p).first().unit_price if o.product_prices.filter(product=p).exists() else None) for p in products]] for o in Producer.objects.all())
+        records = ([o.get_document_type_display(), o.document_number, o.name, o.farm_name, o.phone, o.municipality, o.village, o.notes, "Activo" if o.active else "Inactivo", o.get_fiscal_category_display(), "|".join(o.products.values_list("code", flat=True)), "|".join(o.deductions.values_list("name", flat=True)), str(o.pk), o.assigned_driver.username if o.assigned_driver else "", o.assigned_route.name if o.assigned_route else "", o.assigned_vehicle.plate if o.assigned_vehicle else "", *[(o.product_prices.filter(product=p).first().unit_price if o.product_prices.filter(product=p).exists() else None) for p in products]] for o in Producer.objects.select_related("assigned_driver", "assigned_route", "assigned_vehicle"))
     elif kind == "vehicles":
         records = ([o.plate, o.route.name if o.route else "", o.driver_name, o.driver_document, o.driver_phone, o.capacity_liters or "", o.notes, o.driver.username if o.driver else "", o.name, "Activo" if o.active else "Inactivo"] for o in Vehicle.objects.select_related("route", "driver"))
     else:

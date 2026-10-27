@@ -2,10 +2,11 @@
 {% block title %}Registro de báscula · UBALAC{% endblock %}
 {% block content %}
 <section class="page-header">
-  <div><p class="eyebrow">LABORATORIO · CIERRE FINAL</p><h1>{{ trip.route.name }} · {{ trip.vehicle.plate }} · {{ trip.product.name }}</h1><p>{{ trip.driver.get_full_name|default:trip.driver.username }} · Cerrado {{ trip.ended_at|date:"d/m/Y H:i" }}</p></div>
+  <div><p class="eyebrow">LABORATORIO · CIERRE FINAL</p><h1>{{ trip.route.name }} · {{ trip.vehicle.plate }}</h1><p>{{ trip.driver.get_full_name|default:trip.driver.username }} · Cerrado {{ trip.ended_at|date:"d/m/Y H:i" }}</p></div>
   <a class="button button-secondary" href="{% url 'operations:weighbridge_list' %}">Volver</a>
 </section>
 
+<section class="panel"><strong>Productos recibidos: {{ received_products|join:", "|default:"Sin recibidos" }}</strong>{% if received_products|length > 1 %}<p class="message message-warning">Este pesaje corresponde al total del recorrido. La variación se distribuye proporcionalmente entre los recibidos de leche y suero; no representa una medición independiente por producto. Use la densidad medida para la carga total.</p>{% endif %}</section>
 {% if record and record.status == 'VALIDATED' %}
 <section class="report-kpis">
   <article class="metric"><span>Peso neto</span><strong>{{ record.net_weight_kg|floatformat:2 }} kg</strong></article>

@@ -35,7 +35,7 @@ class ProducerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Producer
-        fields = ["id", "fiscal_category", "document_type", "document_number", "name", "farm_name", "phone", "municipality", "village", "notes", "active", "product_prices"]
+        fields = ["id", "fiscal_category", "document_type", "document_number", "name", "farm_name", "phone", "municipality", "village", "notes", "active", "product_prices", "assigned_driver", "assigned_route", "assigned_vehicle"]
 
 
 class ProductSerializer(serializers.ModelSerializer):

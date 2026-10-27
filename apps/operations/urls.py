@@ -50,6 +50,7 @@ urlpatterns = [
     path("recibidos/", views.ReceiptListView.as_view(), name="receipt_list"),
     path("recibidos/nuevo/", views.ReceiptCreateView.as_view(), name="receipt_create"),
     path("recibidos/alertas/", views.DuplicateReceiptAlertsView.as_view(), name="duplicate_alerts"),
+    path("recibidos/alertas/<uuid:trip_id>/<uuid:producer_id>/<uuid:product_id>/", views.DuplicateReceiptReviewView.as_view(), name="duplicate_review_product"),
     path("recibidos/alertas/<uuid:trip_id>/<uuid:producer_id>/", views.DuplicateReceiptReviewView.as_view(), name="duplicate_review"),
     path("recibidos/<uuid:pk>/", views.ReceiptDetailView.as_view(), name="receipt_detail"),
     path(

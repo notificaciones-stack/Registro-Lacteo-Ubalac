@@ -25,10 +25,10 @@
     <span class="alert-card-icon" aria-hidden="true"><svg><use href="{% static 'icons/modules.svg' %}#alerts"></use></svg></span>
     <div class="alert-card-content">
       <span class="badge badge-danger">{{ alert.total }} recibidos</span>
-      <h2>{{ alert.producer__name }}</h2>
+      <h2>{{ alert.producer__name }} · {{ alert.product__name }}</h2>
       <div class="alert-meta"><span>{{ alert.trip__route__name }}</span><time datetime="{{ alert.trip__started_at|date:'Y-m-d' }}">{{ alert.trip__started_at|date:"d/m/Y" }}</time></div>
     </div>
-    <a class="button button-primary" href="{% url 'operations:duplicate_review' alert.trip_id alert.producer_id %}">Revisar y elegir</a>
+    <a class="button button-primary" href="{% url 'operations:duplicate_review_product' alert.trip_id alert.producer_id alert.product_id %}">Revisar y elegir</a>
   </article>
   {% endfor %}
 </section>

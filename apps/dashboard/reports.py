@@ -29,7 +29,7 @@ def filtered_data(filters):
             trips = trips.filter(**{key: filters[key]})
     if filters.get("product"):
         receipts = receipts.filter(product=filters["product"])
-        trips = trips.filter(product=filters["product"])
+        trips = trips.filter(Q(receipts__product=filters["product"]) | Q(receipts__isnull=True, product=filters["product"])).distinct()
     if filters.get("producer"):
         receipts = receipts.filter(producer=filters["producer"])
         trips = trips.filter(receipts__producer=filters["producer"]).distinct()
@@ -75,7 +75,9 @@ def _operational_report_data(filters):
         driver_rank.append({"name": item["name"], "count": item["count"], "total_minutes": round(minutes, 1), "average_minutes": round(minutes / item["count"], 1), "routes_per_hour": round(item["count"] * 3600 / item["seconds"], 2) if item["seconds"] else 0})
     driver_rank.sort(key=lambda item: (-item["count"], item["average_minutes"], item["name"]))
     weighbridge = WeighbridgeRecord.objects.filter(status=WeighbridgeRecord.Status.VALIDATED, trip__in=trips)
-    bridge_totals = weighbridge.aggregate(variance=Sum("variance_liters"), count=Count("id"))
+    bridge_totals = weighbridge.aggregate(count=Count("id"))
+    # A product/provider filter must not show the variance of the entire mixed load.
+    bridge_totals["variance"] = (totals["report_liters"] or Decimal("0")) - (totals["operational_liters"] or Decimal("0"))
     return {"receipts": receipts, "trips": trips, "total_liters": (totals["report_liters"] or Decimal("0")).quantize(Decimal("0.01")), "operational_liters": (totals["operational_liters"] or Decimal("0")).quantize(Decimal("0.01")), "total_variance": (bridge_totals["variance"] or Decimal("0")).quantize(Decimal("0.01")), "weighbridge_count": bridge_totals["count"], "receipt_count": totals["count"], "all_receipt_count": receipts.count(), "completed_count": completed.count(), "producer_rank": producers, "route_rank": routes, "daily": daily, "daily_max_liters": max_liters, "driver_rank": driver_rank, "top_producer": producers[0] if producers else None, "weighbridge_records": weighbridge.select_related("trip__route", "trip__vehicle", "validated_by")}
 
 

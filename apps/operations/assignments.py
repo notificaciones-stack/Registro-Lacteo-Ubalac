@@ -1,4 +1,5 @@
 from apps.accounts.models import User
+from django.db.models import Q
 from .models import DriverProfile, Producer, Route, Vehicle
 
 
@@ -33,6 +34,8 @@ def assigned_producers(user):
     if user.is_superuser or user.role not in {User.Role.DRIVER, User.Role.COLLECTOR}:
         return producers
     profile = driver_profile(user)
+    scope = Q(assigned_driver=user) | Q(assigned_driver__isnull=True, assigned_route__in=assigned_routes(user)) | Q(assigned_driver__isnull=True, assigned_route__isnull=True)
+    producers = producers.filter(scope)
     if profile and profile.producers.exists():
-        return producers.filter(driver_profiles=profile)
+        return producers.filter(Q(driver_profiles=profile) | Q(assigned_driver=user)).distinct()
     return producers
