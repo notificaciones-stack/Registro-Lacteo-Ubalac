@@ -10,6 +10,7 @@ from .views import (
     ProducerViewSet,
     RouteViewSet,
     RouteTripViewSet,
+    DriverScheduleViewSet,
     SecureTokenView,
     VehicleViewSet,
 )
@@ -21,6 +22,7 @@ router.register("vehicle-inspections", VehicleInspectionViewSet, basename="vehic
 router.register("producers", ProducerViewSet, basename="producer")
 router.register("producer-requests", ProducerRequestViewSet, basename="producer-request")
 router.register("routes", RouteViewSet, basename="route")
+router.register("driver-schedules", DriverScheduleViewSet, basename="driver-schedule")
 router.register("route-trips", RouteTripViewSet, basename="route-trip")
 router.register("vehicles", VehicleViewSet, basename="vehicle")
 router.register("receipts", MilkReceiptViewSet, basename="receipt")

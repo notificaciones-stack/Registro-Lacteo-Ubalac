@@ -216,6 +216,72 @@ class DriverProfile(UUIDTimeStampedModel):
         return self.user.get_full_name() or self.user.username
 
 
+class RouteSchedule(UUIDTimeStampedModel):
+    """Planned collection route. Changes are versioned separately from actual trips."""
+
+    class Shift(models.TextChoices):
+        DAY = "DAY", "Día"
+        NIGHT = "NIGHT", "Noche"
+
+    class CollectionType(models.TextChoices):
+        MILK = "MILK", "Leche"
+        WHEY = "WHEY", "Suero"
+
+    class Status(models.TextChoices):
+        PLANNED = "PLANNED", "Programada"
+        COMPLETED = "COMPLETED", "Cumplida"
+        CANCELLED = "CANCELLED", "Cancelada"
+
+    scheduled_date = models.DateField(db_index=True)
+    shift = models.CharField(max_length=10, choices=Shift.choices, default=Shift.DAY, db_index=True)
+    collection_type = models.CharField(max_length=10, choices=CollectionType.choices, default=CollectionType.MILK, db_index=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PLANNED, db_index=True)
+    driver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="route_schedules")
+    route = models.ForeignKey(Route, on_delete=models.PROTECT, related_name="schedules")
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name="schedules")
+    producers = models.ManyToManyField(Producer, related_name="route_schedules")
+    notes = models.TextField(max_length=1500, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_route_schedules")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="updated_route_schedules")
+
+    class Meta:
+        ordering = ["-scheduled_date", "shift", "route__name"]
+        indexes = [models.Index(fields=["scheduled_date", "shift", "status"], name="schedule_day_shift_idx")]
+
+    def clean(self):
+        errors = {}
+        if self.driver_id and self.driver.role not in {"DRIVER", "COLLECTOR"}:
+            errors["driver"] = "Seleccione un usuario Conductor o Recolector."
+        if self.vehicle_id and not self.vehicle.active:
+            errors["vehicle"] = "La placa seleccionada está inactiva."
+        if self.route_id and not self.route.active:
+            errors["route"] = "La ruta seleccionada está inactiva."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.scheduled_date} · {self.get_shift_display()} · {self.route} · {self.driver}"
+
+
+class RouteScheduleHistory(models.Model):
+    """Immutable snapshot of every schedule creation/update."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    schedule = models.ForeignKey(RouteSchedule, on_delete=models.CASCADE, related_name="history")
+    version = models.PositiveIntegerField()
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="route_schedule_changes")
+    changed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    reason = models.CharField(max_length=500, blank=True)
+    snapshot = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-version"]
+        constraints = [models.UniqueConstraint(fields=["schedule", "version"], name="unique_schedule_history_version")]
+
+    def __str__(self):
+        return f"{self.schedule_id} · v{self.version}"
+
+
 class DriverModuleSecurity(models.Model):
     """One administrator-provisioned password for the management module."""
 

@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 
 from apps.accounts.models import User
-from .models import DocumentSequence, DriverModuleSecurity, MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, Vehicle, WeighbridgeRecord, WeighbridgeRevision
+from .models import DocumentSequence, DriverModuleSecurity, MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, RouteSchedule, RouteScheduleHistory, Vehicle, WeighbridgeRecord, WeighbridgeRevision
 from .models import CollectionProduct, FiscalParameter, PurchaseTerms, VehicleInspection, Notification, ProducerProduct, DriverProfile
 from .forms import ProducerForm, FiscalParameterForm
 
@@ -244,3 +244,19 @@ class DocumentSequenceAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(RouteSchedule)
+class RouteScheduleAdmin(admin.ModelAdmin):
+    list_display = ("scheduled_date", "shift", "collection_type", "route", "vehicle", "driver", "status")
+    list_filter = ("scheduled_date", "shift", "collection_type", "status")
+    search_fields = ("route__name", "vehicle__plate", "driver__username", "driver__first_name", "driver__last_name")
+    filter_horizontal = ("producers",)
+
+
+@admin.register(RouteScheduleHistory)
+class RouteScheduleHistoryAdmin(admin.ModelAdmin):
+    list_display = ("schedule", "version", "changed_by", "changed_at", "reason")
+    readonly_fields = ("schedule", "version", "changed_by", "changed_at", "reason", "snapshot")
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False

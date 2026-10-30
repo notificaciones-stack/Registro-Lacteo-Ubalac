@@ -16,12 +16,12 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
-from apps.operations.models import MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, Vehicle
+from apps.operations.models import MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, RouteSchedule, Vehicle
 from apps.operations.assignments import assigned_producers, assigned_routes, assigned_vehicles, driver_profile
 from apps.operations.services.trips import auto_close_expired_trips, close_trip, start_trip
 
 from .permissions import RoleWritePermission
-from .serializers import MilkReceiptSerializer, ProducerRequestSerializer, ProducerSerializer, RouteSerializer, RouteTripSerializer, VehicleSerializer
+from .serializers import MilkReceiptSerializer, ProducerRequestSerializer, ProducerSerializer, RouteSerializer, RouteScheduleSerializer, RouteTripSerializer, VehicleSerializer
 from .serializers import ProductSerializer, VehicleInspectionSerializer
 from apps.operations.models import CollectionProduct, VehicleInspection
 
@@ -206,7 +206,20 @@ class DriverConfigurationView(APIView):
             "routes": RouteSerializer(assigned_routes(user), many=True).data,
             "vehicles": VehicleSerializer(Vehicle.objects.filter(active=True, driver=user), many=True).data,
             "producers": ProducerSerializer(assigned_producers(user), many=True).data,
+            "schedules": RouteScheduleSerializer(RouteSchedule.objects.filter(driver=user, status=RouteSchedule.Status.PLANNED, scheduled_date__gte=timezone.localdate()).select_related("driver", "route", "vehicle").prefetch_related("producers").order_by("scheduled_date", "shift", "route__name"), many=True).data,
         })
+
+
+class DriverScheduleViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    serializer_class = RouteScheduleSerializer
+    permission_classes = [RoleWritePermission]
+    queryset = RouteSchedule.objects.select_related("driver", "route", "vehicle").prefetch_related("producers")
+
+    def get_queryset(self):
+        qs = super().get_queryset().filter(status=RouteSchedule.Status.PLANNED)
+        if not (self.request.user.is_superuser or self.request.user.role in {User.Role.ADMIN, User.Role.SUPERVISOR}):
+            qs = qs.filter(driver=self.request.user)
+        return qs.filter(scheduled_date__gte=timezone.localdate()).order_by("scheduled_date", "shift", "route__name")
 
 
 class RouteTripViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):

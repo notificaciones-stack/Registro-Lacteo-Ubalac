@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -22,14 +22,15 @@ from apps.accounts.models import User
 from apps.auditlog.models import AuditEvent
 from apps.auditlog.services import record_event
 
-from .forms import DriverConfigurationForm, DriverCreateForm, DriverModuleUnlockForm, DriverPasswordResetForm, DuplicateReviewForm, ImportWorkbookForm, MilkReceiptForm, ProducerForm, RouteForm, StartTripForm, TripReopenForm, VehicleForm, VoidReasonForm, WeighbridgeCorrectionForm, WeighbridgeRecordForm
-from .models import CollectionProduct, DriverModuleSecurity, DriverProfile, MilkReceipt, Producer, Route, RouteTrip, Vehicle, WeighbridgeRecord
+from .forms import DriverConfigurationForm, DriverCreateForm, DriverModuleUnlockForm, DriverPasswordResetForm, RouteScheduleForm, DuplicateReviewForm, ImportWorkbookForm, MilkReceiptForm, ProducerForm, RouteForm, StartTripForm, TripReopenForm, VehicleForm, VoidReasonForm, WeighbridgeCorrectionForm, WeighbridgeRecordForm
+from .models import CollectionProduct, DriverModuleSecurity, DriverProfile, MilkReceipt, Producer, Route, RouteTrip, RouteSchedule, Vehicle, WeighbridgeRecord
 from .assignments import assigned_producers, assigned_routes, assigned_vehicles, driver_profile
 from .password_vault import encrypt_driver_password, get_visible_driver_password
 from .services.bulk import SHEETS, export_workbook, import_workbook
 from .services.trips import close_trip, reopen_trip, start_trip
 from .services.weighbridge import reopen_weighbridge, save_weighbridge_draft, validate_weighbridge
 from .services import create_receipt, void_receipt
+from .services.schedules import record_schedule_history, schedule_pdf
 
 
 MASTER_ROLES = {User.Role.ADMIN, User.Role.SUPERVISOR}
@@ -262,6 +263,92 @@ class SearchableListMixin:
         context = super().get_context_data(**kwargs)
         context["query"] = self.request.GET.get("q", "").strip()
         return context
+
+
+class RouteScheduleListView(RoleRequiredMixin, SearchableListMixin, ListView):
+    allowed_roles = {User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.LABORATORY}
+    model = RouteSchedule
+    template_name = "operations/schedule_list.html"
+    context_object_name = "schedules"
+    paginate_by = 30
+    search_fields = ("driver__username", "driver__first_name", "driver__last_name", "route__name", "vehicle__plate")
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("driver", "route", "vehicle", "created_by", "updated_by").prefetch_related("producers")
+        if self.request.GET.get("date"):
+            qs = qs.filter(scheduled_date=self.request.GET["date"])
+        if self.request.GET.get("shift"):
+            qs = qs.filter(shift=self.request.GET["shift"])
+        if self.request.GET.get("collection_type"):
+            qs = qs.filter(collection_type=self.request.GET["collection_type"])
+        return qs
+
+
+class RouteScheduleCreateView(RoleRequiredMixin, CreateView):
+    allowed_roles = MASTER_ROLES
+    model = RouteSchedule
+    form_class = RouteScheduleForm
+    template_name = "operations/schedule_form.html"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        driver_id = self.request.GET.get("driver")
+        if driver_id and User.objects.filter(pk=driver_id, is_active=True, role__in=[User.Role.DRIVER, User.Role.COLLECTOR]).exists():
+            initial["driver"] = driver_id
+        return initial
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            form.instance.created_by = self.request.user
+            form.instance.updated_by = self.request.user
+            response = super().form_valid(form)
+            record_schedule_history(self.object, self.request.user, "Programación creada")
+            record_event(actor=self.request.user, action=AuditEvent.Action.CREATE, instance=self.object, changes={"schedule": str(self.object)}, request=self.request)
+        messages.success(self.request, "Programación creada correctamente.")
+        return response
+
+    def get_success_url(self):
+        return reverse("operations:schedule_detail", kwargs={"pk": self.object.pk})
+
+
+class RouteScheduleUpdateView(RoleRequiredMixin, UpdateView):
+    allowed_roles = MASTER_ROLES
+    model = RouteSchedule
+    form_class = RouteScheduleForm
+    template_name = "operations/schedule_form.html"
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            form.instance.updated_by = self.request.user
+            response = super().form_valid(form)
+            record_schedule_history(self.object, self.request.user, form.cleaned_data["change_reason"])
+            record_event(actor=self.request.user, action=AuditEvent.Action.UPDATE, instance=self.object, changes={"reason": form.cleaned_data["change_reason"]}, request=self.request)
+        messages.success(self.request, "Programación actualizada y cambio registrado en el historial.")
+        return response
+
+    def get_success_url(self):
+        return reverse("operations:schedule_detail", kwargs={"pk": self.object.pk})
+
+
+class RouteScheduleDetailView(RoleRequiredMixin, DetailView):
+    allowed_roles = {User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.LABORATORY}
+    model = RouteSchedule
+    template_name = "operations/schedule_detail.html"
+    context_object_name = "schedule"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("driver", "route", "vehicle", "created_by", "updated_by").prefetch_related("producers", "history__changed_by")
+
+
+class RouteSchedulePdfView(RoleRequiredMixin, DetailView):
+    allowed_roles = {User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.LABORATORY}
+    model = RouteSchedule
+
+    def get(self, request, *args, **kwargs):
+        schedule = self.get_object()
+        response = HttpResponse(schedule_pdf(schedule), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="programacion-{schedule.scheduled_date}-{schedule.pk}.pdf"'
+        return response
 
 
 class ProducerListView(LoginRequiredMixin, SearchableListMixin, ListView):

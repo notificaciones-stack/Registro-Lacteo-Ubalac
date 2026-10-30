@@ -3,7 +3,7 @@
 {% block content %}
 {% include "operations/product_filter.html" %}
 <section class="page-header">
-  <div class="module-title">{% include "includes/module_icon.html" with icon="scale" tone="navy" %}<div><p class="eyebrow">LABORATORIO</p><h1>Cierre real de báscula</h1><p>Recorridos cerrados pendientes o validados por laboratorio.</p></div></div>
+  <div class="module-title">{% include "includes/module_icon.html" with icon="scale" tone="navy" %}<div><p class="eyebrow">LABORATORIO</p><h1>Cierre real de báscula</h1><p>Recorridos cerrados pendientes o validados por laboratorio.</p></div></div><div class="page-actions"><a class="button button-secondary" href="{% url 'operations:schedule_list' %}">Ver programaciones</a></div>
 </section>
 <section class="panel">
   <div class="table-wrap"><table>

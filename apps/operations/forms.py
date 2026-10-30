@@ -9,7 +9,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.accounts.models import User
-from .models import CollectionProduct, FiscalParameter, ProducerProduct, DriverProfile, MilkReceipt, Producer, Route, RouteTrip, Vehicle, VehicleInspection, WeighbridgeRecord
+from .models import CollectionProduct, FiscalParameter, ProducerProduct, DriverProfile, MilkReceipt, Producer, Route, RouteTrip, RouteSchedule, Vehicle, VehicleInspection, WeighbridgeRecord
 from .assignments import assigned_routes, assigned_vehicles
 
 
@@ -169,6 +169,39 @@ class VehicleForm(StyledModelForm):
         self.fields["driver"].queryset = User.objects.filter(is_active=True, role__in=[User.Role.DRIVER, User.Role.COLLECTOR])
         from .assignment_defaults import assignment_catalog
         self.fields["driver"].widget.attrs["data-assignments"] = json.dumps(assignment_catalog())
+
+
+class RouteScheduleForm(StyledModelForm):
+    change_reason = forms.CharField(label="Motivo del ajuste", required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}), help_text="Obligatorio cuando modifica una programación ya creada.")
+
+    class Meta:
+        model = RouteSchedule
+        fields = ["scheduled_date", "shift", "collection_type", "driver", "route", "vehicle", "producers", "status", "notes"]
+        labels = {
+            "scheduled_date": "Fecha programada", "shift": "Turno", "collection_type": "Tipo de recolección",
+            "driver": "Conductor", "route": "Ruta", "vehicle": "Placa / vehículo",
+            "producers": "Productores programados", "status": "Estado", "notes": "Observaciones",
+        }
+        widgets = {
+            "scheduled_date": forms.DateInput(attrs={"type": "date"}),
+            "producers": forms.CheckboxSelectMultiple(),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["driver"].queryset = User.objects.filter(is_active=True, role__in=[User.Role.DRIVER, User.Role.COLLECTOR])
+        self.fields["route"].queryset = Route.objects.filter(active=True)
+        self.fields["vehicle"].queryset = Vehicle.objects.filter(active=True)
+        self.fields["producers"].queryset = Producer.objects.filter(active=True).select_related("assigned_route").order_by("name")
+        if not self.is_bound and not self.instance.pk:
+            self.initial["scheduled_date"] = timezone.localdate()
+
+    def clean(self):
+        values = super().clean()
+        if self.instance.pk and not (values.get("change_reason") or "").strip():
+            self.add_error("change_reason", "Indique el motivo de la modificación para conservar el historial.")
+        return values
 
 
 class StartTripForm(forms.Form):

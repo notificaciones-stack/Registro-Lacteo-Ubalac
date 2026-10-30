@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from apps.operations.models import CollectionProduct, VehicleInspection, MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, Vehicle
+from apps.operations.models import CollectionProduct, VehicleInspection, MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, RouteSchedule, Vehicle
 
 
 class ProducerRequestSerializer(serializers.ModelSerializer):
@@ -75,6 +75,26 @@ class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = ["id", "plate", "route", "name", "driver", "driver_name", "driver_document", "driver_phone", "capacity_liters", "notes", "active"]
+
+
+class RouteScheduleSerializer(serializers.ModelSerializer):
+    driver_name = serializers.SerializerMethodField()
+    route_name = serializers.CharField(source="route.name", read_only=True)
+    vehicle_plate = serializers.CharField(source="vehicle.plate", read_only=True)
+    producer_details = serializers.SerializerMethodField()
+    shift_label = serializers.CharField(source="get_shift_display", read_only=True)
+    collection_type_label = serializers.CharField(source="get_collection_type_display", read_only=True)
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+
+    def get_driver_name(self, obj):
+        return obj.driver.get_full_name() or obj.driver.username
+
+    def get_producer_details(self, obj):
+        return [{"id": str(p.id), "name": p.name, "farm_name": p.farm_name, "village": p.village} for p in obj.producers.all().order_by("name")]
+
+    class Meta:
+        model = RouteSchedule
+        fields = ["id", "scheduled_date", "shift", "shift_label", "collection_type", "collection_type_label", "status", "status_label", "driver", "driver_name", "route", "route_name", "vehicle", "vehicle_plate", "producer_details", "notes", "updated_at"]
 
 
 class RouteTripSerializer(serializers.ModelSerializer):
