@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>{% block title %}UBALAC{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/form-search.js' %}" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if user.is_authenticated %}has-app-shell{% endif %}">

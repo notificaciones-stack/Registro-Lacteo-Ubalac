@@ -500,3 +500,10 @@ button, .button, a, input, select, textarea, summary { touch-action: manipulatio
 .button-inline-icon { display: inline-flex; vertical-align: -0.2em; margin-right: .25rem; }
 .button-inline-icon svg, .status-icon svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .status-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+
+/* Search controls for long dropdowns and checkbox collections */
+.form-choice-search {display:block;width:100%;box-sizing:border-box;margin:0 0 .45rem;padding:.7rem .85rem;border:1px solid #b7c8cf;border-radius:9px;background:#fff;color:#183540;font:inherit}
+.form-choice-search:focus {outline:2px solid #2a829a;outline-offset:1px}
+.form-search-count {font-size:.8rem;color:#526773;margin:.25rem 0 .55rem}
+.form-search-empty {font-size:.85rem;color:#865b23;margin:.3rem 0}
+.field label[hidden] {display:none!important}
