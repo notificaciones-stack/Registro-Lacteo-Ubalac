@@ -98,6 +98,12 @@ class RouteScheduleSerializer(serializers.ModelSerializer):
 
 
 class RouteTripSerializer(serializers.ModelSerializer):
+    reopened_at = serializers.SerializerMethodField()
+
+    def get_reopened_at(self, obj):
+        # Stable revision token shared with close/fatigue endpoints (avoid Z vs +00:00 mismatches).
+        return obj.reopened_at.isoformat() if obj.reopened_at else None
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     route_name = serializers.CharField(source="route.name", read_only=True)
     vehicle_plate = serializers.CharField(source="vehicle.plate", read_only=True)

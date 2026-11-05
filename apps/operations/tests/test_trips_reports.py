@@ -1,4 +1,6 @@
 import io
+import uuid
+from apps.fleet.models import FatigueSurvey
 from datetime import timedelta
 from datetime import datetime, time
 
@@ -42,6 +44,7 @@ class TripAndReportTests(TestCase):
         self.client.force_login(self.other)
         self.assertEqual(self.client.post(reverse("operations:trip_close", kwargs={"pk": trip.pk})).status_code, 403)
         self.client.force_login(self.driver)
+        FatigueSurvey.objects.create(external_id=uuid.uuid4(), trip=trip, sleep_hours=8, sleepy=False, rested=True, fatigue=False, commitment=True)
         self.assertEqual(self.client.post(reverse("operations:trip_close", kwargs={"pk": trip.pk})).status_code, 302)
         trip.refresh_from_db()
         self.assertIsNotNone(trip.ended_at)
@@ -60,6 +63,7 @@ class TripAndReportTests(TestCase):
         self.client.post(reverse("operations:trip_start"), {"route": self.route.pk, "vehicle": self.vehicle.pk, "product": default_product(), "inspection": self.inspection.pk})
         trip = RouteTrip.objects.get()
         create_receipt(user=self.driver, producer=self.producer, vehicle=self.vehicle, collected_at=timezone.now(), liters="55.25")
+        FatigueSurvey.objects.create(external_id=uuid.uuid4(), trip=trip, sleep_hours=8, sleepy=False, rested=True, fatigue=False, commitment=True)
         self.client.post(reverse("operations:trip_close", kwargs={"pk": trip.pk}))
         today = timezone.localdate().isoformat()
         params = {"date_from": today, "date_to": today, "producer": str(self.producer.pk), "route": str(self.route.pk), "driver": str(self.driver.pk)}

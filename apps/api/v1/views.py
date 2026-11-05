@@ -222,7 +222,7 @@ class DriverScheduleViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return qs.filter(scheduled_date__gte=timezone.localdate()).order_by("scheduled_date", "shift", "route__name")
 
 
-class RouteTripViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class RouteTripViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = RouteTripSerializer
     permission_classes = [RoleWritePermission]
     write_roles = {User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.COLLECTOR, User.Role.DRIVER}
@@ -245,9 +245,18 @@ class RouteTripViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return Response(self.get_serializer(trip).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def close(self, request, pk=None):
         try:
             trip = self.get_object()
+            trip = RouteTrip.objects.select_for_update().get(pk=trip.pk)
+            from apps.fleet.services import cycle_for
+            from apps.fleet.models import FatigueSurvey
+            if "expected_cycle" in request.data:
+                if request.data["expected_cycle"] != cycle_for(trip):
+                    return Response({"detail": "El recorrido fue reabierto en la web. Sincronice para continuar.", "code": "TRIP_REOPENED"}, status=409)
+                if not trip.ended_at and not FatigueSurvey.objects.filter(trip=trip, cycle=cycle_for(trip)).exists():
+                    return Response({"detail": "Complete y sincronice la encuesta de fatiga antes de cerrar."}, status=400)
             if trip.ended_at:
                 return Response(self.get_serializer(trip).data)
             trip = close_trip(trip=trip, user=request.user, request=request)

@@ -16,7 +16,11 @@ from .views import (
 )
 
 
+from apps.fleet.api import FatigueViewSet, FuelViewSet
+
 router = DefaultRouter()
+router.register("fatigue-surveys", FatigueViewSet, basename="fatigue-survey")
+router.register("fuel-entries", FuelViewSet, basename="fuel-entry")
 router.register("products", ProductViewSet, basename="product")
 router.register("vehicle-inspections", VehicleInspectionViewSet, basename="vehicle-inspection")
 router.register("producers", ProducerViewSet, basename="producer")

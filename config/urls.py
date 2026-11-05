@@ -25,6 +25,7 @@ admin.site.site_title = "UBALAC"
 admin.site.index_title = "Configuración del sistema"
 
 urlpatterns = [
+    path("flota/", include("apps.fleet.urls")),
     path("admin/", admin.site.urls),
     path("cuenta/", include("apps.accounts.urls")),
     path("api/", include("apps.api.urls")),

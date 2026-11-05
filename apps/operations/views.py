@@ -554,6 +554,13 @@ class TripCloseView(RoleRequiredMixin, View):
 
     def post(self, request, pk):
         trip = get_object_or_404(RouteTrip, pk=pk)
+        from apps.fleet.services import cycle_for, visible_trips
+        from apps.fleet.models import FatigueSurvey
+        if not visible_trips(request.user).filter(pk=pk).exists():
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("No puede cerrar el recorrido de otro conductor.")
+        if not FatigueSurvey.objects.filter(trip=trip, cycle=cycle_for(trip)).exists():
+            return HttpResponseRedirect(reverse("fleet:fatigue_create") + "?trip=" + str(trip.pk))
         try:
             close_trip(trip=trip, user=request.user, request=request)
         except ValidationError as exc:
