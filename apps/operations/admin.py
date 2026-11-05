@@ -2,7 +2,15 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.hashers import make_password
 
-from django.urls import reverse
+from django.urls import reverse, path
+from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db import transaction
+from openpyxl import Workbook, load_workbook
+from io import BytesIO
+from .forms import validate_driver_password
+from .password_vault import encrypt_driver_password
 
 from apps.accounts.models import User
 from .models import DocumentSequence, DriverModuleSecurity, MilkReceipt, Producer, ProducerRequest, Route, RouteTrip, RouteSchedule, RouteScheduleHistory, Vehicle, WeighbridgeRecord, WeighbridgeRevision
@@ -28,7 +36,7 @@ class ProducerRequestAdmin(admin.ModelAdmin):
 
 
 class DriverModuleSecurityForm(forms.ModelForm):
-    new_password = forms.CharField(label="Nueva clave del módulo", min_length=6, widget=forms.PasswordInput, help_text="Mínimo 6 caracteres. Se almacena como hash y no puede consultarse.")
+    new_password = forms.CharField(label="Nueva clave del módulo", min_length=4, widget=forms.PasswordInput, help_text="Mínimo 4 caracteres. Se almacena como hash y no puede consultarse.")
     confirm_password = forms.CharField(label="Confirmar clave", widget=forms.PasswordInput)
 
     class Meta:
@@ -137,7 +145,7 @@ class PurchaseCatalogAdmin(admin.ModelAdmin):
                 snapshot_terms(producer)
 
 
-@admin.register(PurchaseTerms, VehicleInspection, Notification, ProducerProduct, DriverProfile, WeighbridgeRevision)
+@admin.register(PurchaseTerms, VehicleInspection, Notification, ProducerProduct, WeighbridgeRevision)
 class OperationalHistoryAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in self.model._meta.fields if f.name != "encrypted_login_password"]
@@ -260,3 +268,92 @@ class RouteScheduleHistoryAdmin(admin.ModelAdmin):
     readonly_fields = ("schedule", "version", "changed_by", "changed_at", "reason", "snapshot")
     def has_add_permission(self, request): return False
     def has_change_permission(self, request, obj=None): return False
+
+
+@admin.register(DriverProfile)
+class DriverBulkAdmin(admin.ModelAdmin):
+    change_list_template = "admin/operations/driver_change_list.html"
+    list_display = ("user", "document_number", "phone", "device_id")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "document_number")
+
+    def has_module_permission(self, request):
+        return request.user.is_authenticated and (request.user.is_superuser or request.user.role == User.Role.ADMIN)
+
+    def get_urls(self):
+        custom = [path("importar/", self.admin_site.admin_view(self.import_drivers), name="operations_driverprofile_import")]
+        return custom + super().get_urls()
+
+    def import_drivers(self, request):
+        if not self.has_module_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        columns = ["usuario", "nombre", "apellido", "correo", "documento", "telefono", "contrasena", "rutas", "placas", "productores", "productos", "id_equipo"]
+        if request.GET.get("plantilla") == "1":
+            wb = Workbook(); ws = wb.active; ws.title = "Conductores"; ws.append(columns)
+            output = BytesIO(); wb.save(output)
+            response = HttpResponse(output.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            response["Content-Disposition"] = 'attachment; filename="plantilla_conductores.xlsx"'
+            return response
+        errors = []
+        if request.method == "POST":
+            upload = request.FILES.get("archivo")
+            if not upload or not upload.name.lower().endswith(".xlsx") or upload.size > 3 * 1024 * 1024:
+                errors.append("Seleccione un Excel .xlsx de hasta 3 MB.")
+            else:
+                try:
+                    wb = load_workbook(upload, read_only=True, data_only=True)
+                    ws = wb.active
+                    rows = ws.iter_rows(values_only=True)
+                    header = [str(v or "").strip().lower() for v in next(rows)]
+                    if header != columns:
+                        errors.append("Los encabezados no coinciden con la plantilla. Descargue la plantilla oficial.")
+                    else:
+                        entries = []
+                        usernames = set(); devices = set(); plates_used = set()
+                        for number, values in enumerate(rows, 2):
+                            if not any(v is not None and str(v).strip() for v in values):
+                                continue
+                            if number > 1001:
+                                errors.append("Máximo 1000 conductores por archivo."); break
+                            d = dict(zip(columns, [str(v).strip() if v is not None else "" for v in values]))
+                            username = d["usuario"]
+                            if not username or not d["nombre"] or not d["contrasena"]:
+                                errors.append(f"Fila {number}: usuario, nombre y contraseña son obligatorios.")
+                            if username.lower() in usernames or User.objects.filter(username__iexact=username).exists():
+                                errors.append(f"Fila {number}: usuario duplicado o existente: {username}.")
+                            usernames.add(username.lower())
+                            try: validate_driver_password(d["contrasena"], None)
+                            except forms.ValidationError as exc: errors.append(f"Fila {number}: {exc.messages[0]}")
+                            if d["id_equipo"]:
+                                if d["id_equipo"] in devices or DriverProfile.objects.filter(device_id=d["id_equipo"]).exists():
+                                    errors.append(f"Fila {number}: ID de equipo repetido.")
+                                devices.add(d["id_equipo"])
+                            assignments = {}
+                            for key, model, lookup in [("rutas", Route, "name"), ("placas", Vehicle, "plate"), ("productores", Producer, "document_number"), ("productos", CollectionProduct, "code")]:
+                                found = []
+                                for item in [v.strip() for v in d[key].split(";") if v.strip()]:
+                                    obj = model.objects.filter(**{f"{lookup}__iexact": item}, active=True).first()
+                                    if not obj:
+                                        errors.append(f"Fila {number}: {key} inexistente o inactivo: {item}.")
+                                    else:
+                                        found.append(obj)
+                                        if key == "placas":
+                                            if obj.driver_id or obj.pk in plates_used:
+                                                errors.append(f"Fila {number}: placa ya asignada: {item}.")
+                                            plates_used.add(obj.pk)
+                                assignments[key] = found
+                            entries.append((d, assignments))
+                        if not errors:
+                            with transaction.atomic():
+                                for d, a in entries:
+                                    user = User(username=d["usuario"], first_name=d["nombre"], last_name=d["apellido"], email=d["correo"], role=User.Role.DRIVER)
+                                    user.set_password(d["contrasena"]); user.save()
+                                    profile = DriverProfile.objects.create(user=user, document_number=d["documento"], phone=d["telefono"], device_id=d["id_equipo"] or None, encrypted_login_password=encrypt_driver_password(d["contrasena"]))
+                                    profile.routes.set(a["rutas"]); profile.producers.set(a["productores"]); profile.products.set(a["productos"])
+                                    for vehicle in a["placas"]:
+                                        vehicle.driver = user; vehicle.save()
+                            messages.success(request, f"Se importaron {len(entries)} conductores.")
+                            return redirect("admin:operations_driverprofile_changelist")
+                except Exception as exc:
+                    errors.append(f"No se pudo procesar el archivo: {type(exc).__name__}.")
+        return render(request, "admin/operations/driver_import.html", {"title": "Importar conductores", "errors": errors, "opts": self.model._meta})

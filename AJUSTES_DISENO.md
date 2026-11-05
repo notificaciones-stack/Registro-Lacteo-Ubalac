@@ -1,4 +1,4 @@
-# Ajustes de diseño de Administración v2
+# Ajustes de diseño de Administración
 
 - Iconos del menú con tamaño uniforme, sin contenedores superpuestos.
 - Identificación del módulo activo al crear, consultar y editar parámetros.

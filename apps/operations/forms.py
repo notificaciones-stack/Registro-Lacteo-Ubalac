@@ -327,7 +327,7 @@ class DriverConfigurationForm(StyledModelForm):
 
 
 class DriverCreateForm(DriverConfigurationForm):
-    password1 = forms.CharField(label="Contraseña inicial", min_length=6, widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "form-control"}))
+    password1 = forms.CharField(label="Contraseña inicial", min_length=4, widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "form-control"}))
     password2 = forms.CharField(label="Confirmar contraseña", widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "form-control"}))
 
     def clean(self):
@@ -348,7 +348,7 @@ class DriverCreateForm(DriverConfigurationForm):
 
 
 class DriverPasswordResetForm(forms.Form):
-    password1 = forms.CharField(label="Nueva contraseña", min_length=6, widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password"}))
+    password1 = forms.CharField(label="Nueva contraseña", min_length=4, widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password"}))
     password2 = forms.CharField(label="Confirmar contraseña", widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password"}))
 
     def __init__(self, *args, user=None, **kwargs):
@@ -373,12 +373,9 @@ class DriverModuleUnlockForm(forms.Form):
 
 
 def validate_driver_password(password, user):
-    validate_password(password, user=user, password_validators=[
-        MinimumLengthValidator(min_length=6),
-        UserAttributeSimilarityValidator(),
-        CommonPasswordValidator(),
-        NumericPasswordValidator(),
-    ])
+    # Exclusivo para credenciales de conductores; no modifica validadores globales.
+    if len(password) < 4:
+        raise forms.ValidationError("La contraseña debe tener al menos 4 caracteres.")
 
 
 class MilkReceiptForm(StyledModelForm):
