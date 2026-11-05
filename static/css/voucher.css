@@ -34,3 +34,5 @@ body.paper-58 { --ticket-width: 54mm; }
   .screen-actions { display: none; }
   .ticket { width: auto; margin: 0; padding: 2mm; border: 0; box-shadow: none; }
 }
+
+.ticket-logo {display:block;width:90%;max-width:245px;height:auto;margin:0 auto 8px;object-fit:contain;}

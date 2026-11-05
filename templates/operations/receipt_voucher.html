@@ -18,7 +18,7 @@
   </nav>
   <main class="ticket">
     <header class="ticket-header">
-      <div class="ticket-brand">UBALAC</div>
+      <img class="ticket-logo" src="{% static 'img/ubalac-logo.jpg' %}" alt="UBALAC">
       <h1>Comprobante de recolección de {{ receipt.product.name|lower }}</h1>
       <p>Copia para el proveedor · Formato {{ paper_width }} mm</p>
     </header>
@@ -36,7 +36,6 @@
       <div><dt>Recolector</dt><dd>{{ receipt.collected_by.get_full_name|default:receipt.collected_by.username }}</dd></div>
     </dl>
     <section class="liters-block"><span>Cantidad recogida</span><strong>{{ receipt.liters|floatformat:2 }} L</strong></section>
-    <p>Precio histórico COP/L: {{ receipt.unit_price|default_if_none:"Pendiente de valoración" }}. Consulte la liquidación del periodo para el detalle de descuentos.</p>
     <section class="ticket-notes">
       <strong>Observaciones</strong>
       <p>{{ receipt.observations|default:"Sin observaciones" }}</p>

@@ -507,3 +507,5 @@ button, .button, a, input, select, textarea, summary { touch-action: manipulatio
 .form-search-count {font-size:.8rem;color:#526773;margin:.25rem 0 .55rem}
 .form-search-empty {font-size:.85rem;color:#865b23;margin:.3rem 0}
 .field label[hidden] {display:none!important}
+
+.ubalac-brand-logo {width:104px;max-height:52px;object-fit:contain;background:white;border-radius:8px;padding:3px;}

@@ -15,7 +15,7 @@
   {% if user.is_authenticated %}
     <header class="app-topbar">
       <a class="brand" href="{% url 'dashboard:index' %}">
-        <span class="brand-mark">VT</span>
+        <img class="ubalac-brand-logo" src="{% static 'img/ubalac-logo.jpg' %}" alt="Logo UBALAC">
         <span class="brand-copy"><strong>UBALAC</strong><small>Recepción de productos</small></span>
       </a>
       <details class="mobile-menu"><summary><svg aria-hidden="true"><use href="{% static 'icons/modules.svg' %}#menu"></use></svg><span>Menú</span></summary><div class="mobile-menu-panel">{% include "includes/app_navigation.html" %}</div></details>
