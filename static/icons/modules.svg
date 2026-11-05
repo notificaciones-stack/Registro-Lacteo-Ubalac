@@ -15,4 +15,8 @@
   <symbol id="menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
   <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
   <symbol id="search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+
+  <symbol id="fuel" viewBox="0 0 24 24"><path d="M5 21V4h10v17M4 21h12M7 7h6v5H7zM15 8h2l2 2v7a2 2 0 0 0 4 0v-5l-2-2M19 10l2-2"/></symbol>
+  <symbol id="fatigue" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h4M17 13v3M17 19h.01"/></symbol>
+  <symbol id="warning" viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v5M12 18h.01"/></symbol>
 </svg>

@@ -86,6 +86,33 @@ class FleetTests(TestCase):
         self.client.force_login(self.other)
         self.assertEqual(self.client.get(reverse('fleet:photo', args=[FuelEntry.objects.get().pk, 'invoice'])).status_code, 404)
         self.assertEqual(self.client.get(reverse('fleet:fuel')).context['page_obj'].paginator.count, 0)
+    def test_only_admin_or_supervisor_can_adjust_fuel_amounts(self):
+        entry = FuelEntry.objects.create(
+            external_id=uuid.uuid4(), trip=self.trip, fueled_at=timezone.now(),
+            gallons=Decimal('10.000'), total_price=Decimal('150000.00'),
+            odometer_km=1000, full_tank=True, fuel_photo=b'a', invoice_photo=b'a'
+        )
+        self.client.force_login(self.driver)
+        response = self.client.post(reverse('fleet:fuel_update', args=[entry.pk]), {'gallons': '12.500', 'total_price': '180000.00'})
+        self.assertEqual(response.status_code, 403)
+        entry.refresh_from_db()
+        self.assertEqual(entry.gallons, Decimal('10.000'))
+
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('fleet:fuel_update', args=[entry.pk]), {'gallons': '12.500', 'total_price': '180000.00'})
+        self.assertEqual(response.status_code, 302)
+        entry.refresh_from_db()
+        self.assertEqual(entry.gallons, Decimal('12.500'))
+        self.assertEqual(entry.total_price, Decimal('180000.00'))
+
+        supervisor = make_user(username='supervisor', role='SUPERVISOR')
+        self.client.force_login(supervisor)
+        response = self.client.post(reverse('fleet:fuel_update', args=[entry.pk]), {'gallons': '11.250', 'total_price': '170000.00'})
+        self.assertEqual(response.status_code, 302)
+        entry.refresh_from_db()
+        self.assertEqual(entry.gallons, Decimal('11.250'))
+        self.assertEqual(entry.total_price, Decimal('170000.00'))
+
     def test_full_to_full_includes_partial_fills(self):
         start = timezone.now() - timedelta(minutes=20)
         a = FuelEntry.objects.create(external_id=uuid.uuid4(), trip=self.trip, fueled_at=start, gallons=10, total_price=100, odometer_km=1000, full_tank=True, fuel_photo=b'a', invoice_photo=b'a')

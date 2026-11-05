@@ -21,6 +21,20 @@ class FuelForm(FleetForm):
         widgets = {'fueled_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'), 'observations': forms.Textarea(attrs={'rows': 3})}
 
 
+class FuelAdjustmentForm(forms.ModelForm):
+    class Meta:
+        model = FuelEntry
+        fields = ['gallons', 'total_price']
+        labels = {
+            'gallons': 'Galones tanqueados',
+            'total_price': 'Valor total de la factura (COP)',
+        }
+        widgets = {
+            'gallons': forms.NumberInput(attrs={'step': '0.001', 'min': '0.001'}),
+            'total_price': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01'}),
+        }
+
+
 class FatigueForm(FleetForm):
     expected_cycle = forms.CharField(required=False, widget=forms.HiddenInput)
     commitment = forms.BooleanField(label='Me comprometo a informar la fatiga y no iniciar o continuar conduciendo hasta su evaluación y medidas seguras.')

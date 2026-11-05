@@ -1,6 +1,6 @@
 {% extends 'base.html' %}{% block content %}
-<div class="page-header"><h1>{{ title }}</h1></div><section class="panel"><p>{{ hint }}</p>
+<div class="page-header"><div class="module-title">{% if icon %}{% include "includes/module_icon.html" with icon=icon tone=tone %}{% endif %}<div><h1>{{ title }}</h1></div></div></div><section class="panel"><p>{{ hint }}</p>
 <form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}
 {% if is_fatigue %}<label><input type="checkbox" name="close_trip" value="yes" checked> Cerrar el recorrido al guardar esta encuesta</label>{% endif %}
-<p><button class="button button-primary">Guardar {% if is_fatigue %}encuesta{% else %}tanqueo{% endif %}</button></p>
+<p><button class="button button-primary">{% if is_fuel_adjustment %}Guardar ajuste{% else %}Guardar {% if is_fatigue %}encuesta{% else %}tanqueo{% endif %}{% endif %}</button></p>
 </form></section>{% endblock %}

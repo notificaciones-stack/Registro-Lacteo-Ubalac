@@ -496,3 +496,7 @@ button, .button, a, input, select, textarea, summary { touch-action: manipulatio
 
 .inspection-issue { border-left: 5px solid #c26116; background: #fffaf3; }
 .inspection-issue .badge-danger { white-space: normal; }
+
+.button-inline-icon { display: inline-flex; vertical-align: -0.2em; margin-right: .25rem; }
+.button-inline-icon svg, .status-icon svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.status-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }

@@ -9,12 +9,12 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import FormView, TemplateView, View
+from django.views.generic import FormView, TemplateView, View, UpdateView
 from django.core.paginator import Paginator
 from apps.accounts.mixins import RoleRequiredMixin
 from apps.operations.services.trips import close_trip
 from .models import FatigueSurvey, FuelEntry
-from .forms import FuelForm, FatigueForm, ReportFilter
+from .forms import FuelForm, FuelAdjustmentForm, FatigueForm, ReportFilter
 from .services import STAFF, WRITERS, visible_trips, save_record, efficiency, cycle_for
 
 
@@ -47,13 +47,52 @@ class RecordCreate(RoleRequiredMixin, FormView):
 class FuelCreate(RecordCreate):
     model, form_class = FuelEntry, FuelForm
     success_url = reverse_lazy('fleet:fuel')
-    extra_context = {'title': '⛽ Registrar tanqueo', 'hint': 'El conductor, la placa y la ruta se toman del recorrido. Adjunte ambas fotos (máximo 4 MB cada una).'}
+    extra_context = {'title': 'Registrar tanqueo', 'icon': 'fuel', 'tone': 'green', 'hint': 'El conductor, la placa y la ruta se toman del recorrido. Adjunte ambas fotos (máximo 4 MB cada una).'}
+
+
+class FuelUpdate(RoleRequiredMixin, UpdateView):
+    model = FuelEntry
+    form_class = FuelAdjustmentForm
+    template_name = 'fleet/form.html'
+    success_url = reverse_lazy('fleet:fuel')
+    allowed_roles = {'ADMIN', 'SUPERVISOR'}
+    extra_context = {
+        'title': 'Ajustar tanqueo',
+        'icon': 'fuel',
+        'tone': 'amber',
+        'hint': 'Solo se permite modificar los galones tanqueados y el valor total de la factura. El resto del registro permanece bloqueado.',
+        'is_fuel_adjustment': True,
+    }
+
+    def get_queryset(self):
+        return FuelEntry.objects.filter(trip__in=visible_trips(self.request.user)).defer('fuel_photo', 'invoice_photo')
+
+    def form_valid(self, form):
+        from apps.auditlog.models import AuditEvent
+        from apps.auditlog.services import record_event
+
+        with transaction.atomic():
+            current = FuelEntry.objects.select_for_update().defer('fuel_photo', 'invoice_photo').get(pk=self.object.pk)
+            changes = {}
+            for field in ('gallons', 'total_price'):
+                old_value = getattr(current, field)
+                new_value = form.cleaned_data[field]
+                if old_value != new_value:
+                    changes[field] = {'before': str(old_value), 'after': str(new_value)}
+                    setattr(current, field, new_value)
+            current.full_clean()
+            current.save(update_fields=['gallons', 'total_price', 'updated_at'])
+            self.object = current
+            if changes:
+                record_event(actor=self.request.user, action=AuditEvent.Action.UPDATE, instance=current, changes=changes, request=self.request)
+        messages.success(self.request, 'Tanqueo actualizado correctamente.')
+        return redirect(self.success_url)
 
 
 class FatigueCreate(RecordCreate):
     model, form_class = FatigueSurvey, FatigueForm
     success_url = reverse_lazy('fleet:fatigue')
-    extra_context = {'title': '📋 Encuesta diaria de fatiga y cansancio · cierre del turno', 'hint': 'Identifique condiciones de fatiga al finalizar su jornada. Si presenta somnolencia, informe al responsable antes de continuar conduciendo.', 'is_fatigue': True}
+    extra_context = {'title': 'Encuesta diaria de fatiga y cansancio · cierre del turno', 'icon': 'fatigue', 'tone': 'amber', 'hint': 'Identifique condiciones de fatiga al finalizar su jornada. Si presenta somnolencia, informe al responsable antes de continuar conduciendo.', 'is_fatigue': True}
 
 
 class FleetReport(RoleRequiredMixin, TemplateView):
