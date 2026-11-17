@@ -116,6 +116,10 @@ class RouteTripSerializer(serializers.ModelSerializer):
 
 
 class MilkReceiptSerializer(serializers.ModelSerializer):
+    producer_document_type = serializers.CharField(source="producer.get_document_type_display", read_only=True)
+    municipality = serializers.CharField(source="producer.municipality", read_only=True)
+    village = serializers.CharField(source="producer.village", read_only=True)
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     amounts = serializers.SerializerMethodField()
 
@@ -141,7 +145,7 @@ class MilkReceiptSerializer(serializers.ModelSerializer):
             "producer",
             "product", "product_name", "unit_price", "amounts",
             "producer_name",
-            "producer_document",
+            "producer_document", "producer_document_type", "municipality", "village",
             "farm_name",
             "route",
             "route_name",
@@ -170,7 +174,7 @@ class MilkReceiptSerializer(serializers.ModelSerializer):
             "internal_number",
             "collected_by_username",
             "producer_name",
-            "producer_document",
+            "producer_document", "producer_document_type", "municipality", "village",
             "farm_name",
             "vehicle_plate",
             "vehicle_name",

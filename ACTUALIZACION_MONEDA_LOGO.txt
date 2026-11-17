@@ -1,0 +1,54 @@
+ACTUALIZACIÓN UBALAC 1.1.1 — MONEDA, RECIBO Y LOGO
+
+Base: los ZIP Registro-Lacteo-Ubalac(4).zip y ubalac_mobile(2).zip aportados el 17/11/2026. Se conservan las modificaciones existentes de esos archivos.
+
+WEB
+- Formato COP en importes visibles: $ 1.250.000,00; negativos $ -1.234,50.
+- Se aplica a compras por proveedor, liquidaciones, precios históricos y tanqueos.
+- Los precios pendientes no se convierten en cero. Los campos de entrada, cantidades de litros, cálculos, API numérica y exportaciones Excel conservan su funcionamiento.
+- API de recibidos: añade tipo de documento, municipio y vereda para imprimir los mismos datos de la web.
+- Sin migraciones nuevas ni cambios de credenciales.
+
+MÓVIL
+- Logo derivado directamente de static/img/ubalac-logo.jpg de la web, sin rediseñarlo.
+- Iconos Android/iOS, icono adaptativo Android y máscara monocromática con UBALAC.
+- Recibo de 58 mm: logo, título por producto, copia para proveedor, consecutivo, fecha/hora de Colombia, proveedor, documento, finca, municipio, vehículo, ruta, vereda, recolector, cantidad, observaciones, firmas, UUID y fecha de generación.
+- El historial utiliza los datos proporcionados por la API para conservar sus observaciones y recolector.
+- Los tickets no incluyen precios, retenciones ni liquidaciones.
+- Se conserva el transporte Bluetooth y la base local. No se necesita añadir módulos nativos.
+- La impresora térmica imprime en blanco y negro. La tipografía, acentos y espaciado físico dependen de ESC/POS; no es una reproducción de píxeles del navegador. Se usa texto ASCII para compatibilidad con impresoras de distintas tablas de caracteres.
+
+ACTUALIZAR WEB
+Desde la carpeta web:
+python -m pip install -r requirements.txt
+python manage.py check
+python manage.py migrate
+python manage.py collectstatic --noinput
+
+Desplegar primero la web en Railway con sus mismas variables. El comando migrate aplica únicamente las migraciones que ya pudieran estar pendientes; esta entrega no crea tablas.
+
+GENERAR APK CON EL LOGO
+Desde la carpeta móvil:
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile preview
+
+Instalar el APK resultante sobre la app existente, con la misma firma y nombre de paquete. No desinstalar ni borrar datos pendientes. Si el lanzador conserva temporalmente el icono anterior, reiniciar el dispositivo; no borrar el almacenamiento de la app.
+
+PARA IPHONE
+npx eas-cli@latest build --platform ios --profile production
+npx eas-cli@latest submit --platform ios --profile production
+
+Se requiere su cuenta y firma de Apple. Expo Go y una recarga de Metro no actualizan el icono instalado: hay que instalar el nuevo build.
+
+PRUEBA FINAL EN LA IMPRESORA
+1. Actualizar web y app.
+2. Registrar un recibido de leche y otro de suero, con observaciones y ruta.
+3. Imprimir y comparar contra el formato 58 mm de la web.
+4. Verificar logo completo, UUID, municipio/vereda, dos firmas y alimentación final del papel.
+5. Reimprimir desde historial y probar una copia provisional sin internet.
+
+No se realizó un despliegue remoto ni una compilación firmada de APK/IPA en esta entrega. Debe validarse la impresión con su modelo físico.

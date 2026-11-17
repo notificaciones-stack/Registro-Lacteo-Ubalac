@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load currency %}
 {% block title %}{{ receipt.internal_number }} · UBALAC{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -10,7 +10,7 @@
 </div>
 <section class="panel detail-grid">
   <div><span>Producto</span><strong>{{ receipt.product.name }}</strong></div>
-  <div><span>Precio histórico COP/L</span><strong>{{ receipt.unit_price|default_if_none:"Pendiente de valoración" }}</strong></div>
+  <div><span>Precio histórico COP/L</span><strong>{{ receipt.unit_price|default_if_none:"Pendiente de valoración"|cop }}</strong></div>
   <div><a href="{% url 'operations:producer_statement' receipt.producer_id %}">Liquidación y detalle del proveedor</a></div>
   <div><span>Productor</span><strong>{{ receipt.producer.name }}</strong></div>
   <div><span>Documento</span><strong>{{ receipt.producer.get_document_type_display }} {{ receipt.producer.document_number }}</strong></div>
