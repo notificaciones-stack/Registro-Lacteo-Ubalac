@@ -40,3 +40,17 @@ class FuelEntry(UUIDTimeStampedModel):
     class Meta:
         ordering = ['-fueled_at', '-created_at']
         constraints = [models.CheckConstraint(condition=models.Q(gallons__gt=0, total_price__gt=0), name='fuel_positive_amounts')]
+
+
+class ReopenRequest(UUIDTimeStampedModel):
+    trip = models.ForeignKey('operations.RouteTrip', on_delete=models.PROTECT, related_name='reopen_requests')
+    closed_at = models.DateTimeField()
+    reason = models.TextField(max_length=2000)
+    status = models.CharField(max_length=12, default='PENDING', choices=[('PENDING', 'Pendiente'), ('APPROVED', 'Aprobada'), ('REJECTED', 'Rechazada')])
+    resolution = models.TextField(blank=True, max_length=2000)
+    reviewed_by = models.ForeignKey('accounts.User', null=True, blank=True, on_delete=models.SET_NULL)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['trip', 'closed_at'], name='reopen_request_trip_close_unique')]

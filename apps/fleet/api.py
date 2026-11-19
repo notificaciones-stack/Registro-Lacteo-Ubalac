@@ -47,6 +47,7 @@ class FleetViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.Gene
 
 
 class FatigueViewSet(FleetViewSet):
+    sst_readable = True
     serializer_class = FatigueSerializer
 
 

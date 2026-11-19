@@ -79,7 +79,7 @@ class FiscalUpdateView(CatalogSaveMixin, UpdateView):
 
 
 class InspectionListView(RoleRequiredMixin, ListView):
-    allowed_roles = {User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.LABORATORY, User.Role.DRIVER, User.Role.COLLECTOR}
+    allowed_roles = {User.Role.SST, User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.LABORATORY, User.Role.DRIVER, User.Role.COLLECTOR}
     template_name = "operations/inspections.html"
     context_object_name = "inspections"
     paginate_by = 30
@@ -99,6 +99,16 @@ class InspectionListView(RoleRequiredMixin, ListView):
             from django.db.models import Q
             qs = qs.filter(Q(safe_to_operate=False) | Q(brakes="ISSUE") | Q(tires="ISSUE") | Q(lights="ISSUE") | Q(fluids="ISSUE") | Q(tank_hygiene="ISSUE") | Q(documents="ISSUE") | Q(safety_kit="ISSUE"))
         return qs
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = VehicleInspection.objects.select_related('driver', 'vehicle')
+        if self.request.user.role in {User.Role.DRIVER, User.Role.COLLECTOR} and not self.request.user.is_superuser:
+            qs = qs.filter(driver=self.request.user)
+        context['driver_choices'] = qs.order_by('driver__username').values_list('driver_id', 'driver__username').distinct()
+        context['vehicle_choices'] = qs.order_by('vehicle__plate').values_list('vehicle_id', 'vehicle__plate').distinct()
+        return context
 
 
 class InspectionCreateView(RoleRequiredMixin, CreateView):

@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 app_name = 'fleet'
 urlpatterns = [
+    path('reaperturas/', views.ReopenRequests.as_view(), name='reopen_requests'),
     path('tanqueos/', views.FleetReport.as_view(), name='fuel'),
     path('tanqueos/nuevo/', views.FuelCreate.as_view(), name='fuel_create'),
     path('tanqueos/exportar/', views.FuelExport.as_view(), name='fuel_export'),

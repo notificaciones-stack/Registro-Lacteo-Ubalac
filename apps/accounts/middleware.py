@@ -70,3 +70,26 @@ class ForcePasswordChangeMiddleware:
                     )
                 return redirect("accounts:password_change")
         return self.get_response(request)
+
+
+class SSTModuleMiddleware:
+    """Read-only SST workspace; deny other web modules, including direct URLs."""
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        user = request.user
+        if not user.is_authenticated or user.is_superuser or user.role != 'SST':
+            return None
+        name = request.resolver_match.view_name
+        if name == 'dashboard:index':
+            return redirect('operations:inspection_list')
+        allowed = {'operations:inspection_list', 'fleet:fatigue',
+                   'accounts:password_change', 'accounts:password_change_done',
+                   'accounts:logout', 'accounts:login'}
+        if name not in allowed:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied('Este perfil solo permite consultar inspecciones y fatiga.')

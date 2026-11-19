@@ -12,6 +12,7 @@ class User(AbstractUser):
         DRIVER = "DRIVER", "Conductor"
         ACCOUNTING = "ACCOUNTING", "Contabilidad"
         LABORATORY = "LABORATORY", "Laboratorio"
+        SST = "SST", "SST / Recursos Humanos"
         VIEWER = "VIEWER", "Consulta"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

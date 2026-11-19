@@ -52,6 +52,7 @@ MIDDLEWARE = [
     "apps.accounts.middleware.SecurityHeadersMiddleware",
     "apps.accounts.middleware.NoStoreAuthenticatedMiddleware",
     "apps.accounts.middleware.ForcePasswordChangeMiddleware",
+    "apps.accounts.middleware.SSTModuleMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

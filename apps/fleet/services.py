@@ -18,7 +18,7 @@ WRITERS = {'ADMIN', 'SUPERVISOR', 'DRIVER', 'COLLECTOR'}
 
 def visible_trips(user):
     qs = RouteTrip.objects.select_related('driver', 'vehicle', 'route')
-    return qs if user.is_superuser or user.role in STAFF else qs.filter(driver=user)
+    return qs if user.is_superuser or user.role in STAFF | {'SST'} else qs.filter(driver=user)
 
 
 def cycle_for(trip):
@@ -105,3 +105,49 @@ def efficiency(entry):
     fills = FuelEntry.objects.filter(trip__vehicle=entry.trip.vehicle, fueled_at__gt=previous.fueled_at, fueled_at__lte=entry.fueled_at)
     gallons = sum(fills.values_list('gallons', flat=True), Decimal(0))
     return round(Decimal(entry.odometer_km - previous.odometer_km) / gallons, 2) if gallons else None
+
+
+@transaction.atomic
+def request_reopen(*, trip, user, reason, request=None):
+    from .models import ReopenRequest
+    from apps.operations.services.trips import trip_day_cutoff
+    trip = RouteTrip.objects.select_for_update().get(pk=trip.pk)
+    if user.role not in {'DRIVER', 'COLLECTOR'} or trip.driver_id != user.pk:
+        raise PermissionDenied('Solo puede solicitar la reapertura de su propio recorrido.')
+    if not trip.ended_at:
+        raise ValidationError('Sincronice primero el cierre del recorrido.')
+    if timezone.localdate(trip.started_at) != timezone.localdate() or timezone.now() >= trip_day_cutoff(trip):
+        raise ValidationError('Solo puede solicitar reapertura del día actual antes de las 23:59.')
+    reason = reason.strip()
+    if not 8 <= len(reason) <= 2000:
+        raise ValidationError('Explique el motivo entre 8 y 2000 caracteres.')
+    item, created = ReopenRequest.objects.get_or_create(trip=trip, closed_at=trip.ended_at, defaults={'reason': reason})
+    if created:
+        record_event(actor=user, action=AuditEvent.Action.CREATE, instance=item, request=request)
+        enqueue_notification(key=f'reopen:{item.pk}', subject='UBALAC · Solicitud de reapertura', body=f'Conductor: {trip.driver}\nRuta: {trip.route}\nMotivo: {reason}\nRevisar en Solicitudes de reapertura de la plataforma.')
+    return item
+
+
+@transaction.atomic
+def resolve_reopen(*, item, user, approve, reason, request=None):
+    from .models import ReopenRequest
+    from apps.operations.services.trips import reopen_trip
+    if not (user.is_superuser or user.role in {'ADMIN', 'SUPERVISOR'}):
+        raise PermissionDenied()
+    if not 8 <= len(reason.strip()) <= 2000:
+        raise ValidationError('Indique el motivo de la decisión entre 8 y 2000 caracteres.')
+    trip = RouteTrip.objects.select_for_update().get(pk=item.trip_id)
+    item = ReopenRequest.objects.select_for_update().get(pk=item.pk)
+    if item.status != 'PENDING':
+        raise ValidationError('La solicitud ya fue resuelta.')
+    if approve:
+        if trip.ended_at != item.closed_at:
+            raise ValidationError('El recorrido cambió desde esta solicitud. Revise su estado actual.')
+        reopen_trip(trip=trip, user=user, reason=reason, request=request)
+    item.status = 'APPROVED' if approve else 'REJECTED'
+    item.resolution = reason.strip()
+    item.reviewed_by = user
+    item.reviewed_at = timezone.now()
+    item.save()
+    record_event(actor=user, action=AuditEvent.Action.UPDATE, instance=item, changes={'status': item.status, 'reason': item.resolution}, request=request)
+    return item

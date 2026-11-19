@@ -1,0 +1,52 @@
+UBALAC 1.2.0 - SST, cierre y solicitudes de reapertura
+17 de noviembre de 2026
+
+ORDEN DE ACTUALIZACIÓN
+1. Respalde la base de datos de producción.
+2. Actualice primero el código web en su repositorio y despliegue Railway conservando las variables vigentes.
+3. Ejecute en el entorno del servicio web:
+   python manage.py migrate --noinput
+   python manage.py collectstatic --noinput
+   Si estos comandos ya forman parte del despliegue, no necesita duplicarlos.
+   Nuevas migraciones: accounts/0004_alter_user_role y fleet/0002_reopenrequest.
+   No se han cambiado las dependencias Python ni la configuración de producción.
+4. Cree el usuario SST en /admin/ > Usuarios > Rol: SST / Recursos Humanos.
+   No active superusuario ni acceso al admin para ese perfil de consulta.
+5. Compile e instale la app actualizada después de desplegar la web:
+   cd ubalac_mobile
+   npm ci
+   npx eas-cli@latest build --platform android --profile preview
+   El perfil preview genera APK y conserva la URL de producción en eas.json.
+   Use la misma cuenta/proyecto EAS y firma de la app instalada. Sincronice pendientes antes de actualizar.
+   No desinstale la app ni borre datos cuando haya registros sin confirmar.
+6. Pruebe con un usuario conductor autorizado y un SST.
+
+PRUEBA DE ACEPTACIÓN
+- SST ve inspecciones iniciales y fatiga final; no puede abrir finanzas, productores ni reaperturas.
+- Conductor inspecciona, sincroniza y abre recorrido.
+- Registra leche y suero de un productor habilitado: son dos productos independientes.
+- Si corrige leche mediante otra captura, se muestra advertencia y surge alerta web.
+- Administrador/Supervisor elige el recibido válido; los anulados permanecen en historial.
+- Sincronización retira los anulados de la operación móvil.
+- En cierre: completar fatiga, probar Volver y luego confirmar cierre.
+- En Cierre/Recorrido enviar motivo de reapertura con internet.
+- Web: Solicitudes de reapertura > aprobar o rechazar con motivo.
+- App: consultar respuesta/sincronizar. Una aprobación permite continuar el mismo recorrido.
+- Reabrir y volver a cerrar debe producir una nueva solicitud independiente.
+- Se conservan restricciones: mismo día antes de las 23:59 Colombia, sin recorrido incompatible ni báscula validada.
+
+ALCANCE
+Los perfiles anteriores se conservan. SST tiene restricción específica por módulos.
+No se incorpora editor general de permisos por casillas.
+Los informes generales de roles anteriores conservan sus reglas existentes.
+La regla de recibidos se agrupa por recorrido + productor + producto.
+Se permiten capturas correctivas; mientras se resuelve la alerta, pueden sumar en informes.
+La reapertura manual web existente también se conserva para responsables autorizados.
+La solicitud requiere conexión y cierre previamente sincronizado.
+
+VALIDACIÓN REALIZADA
+Web: suite de 91 pruebas aprobada; 5 pruebas específicas repetidas tras el ajuste final, aprobadas.
+Móvil: 15 pruebas, TypeScript, lint y exportación JavaScript Android aprobados.
+No se generó APK en esta entrega ni se desplegó en Railway.
+Falta prueba en teléfono físico, impresora y servidor de producción.
+Se incluyen manuales PDF y Word en docs/.

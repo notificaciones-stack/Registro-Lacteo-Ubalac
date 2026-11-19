@@ -148,6 +148,7 @@ class FleetReport(RoleRequiredMixin, TemplateView):
 
 
 class FatigueReport(FleetReport):
+    allowed_roles = STAFF | WRITERS | {'SST'}
     model = FatigueSurvey
 
 
@@ -177,3 +178,33 @@ class FuelExport(FleetReport):
         response['Content-Disposition'] = 'attachment; filename="tanqueos.xlsx"'
         wb.save(response)
         return response
+
+
+class ReopenRequests(RoleRequiredMixin, TemplateView):
+    allowed_roles = {'ADMIN', 'SUPERVISOR'}
+    template_name = 'fleet/reopen_requests.html'
+
+    def get_context_data(self, **kwargs):
+        from .models import ReopenRequest
+        context = super().get_context_data(**kwargs)
+        qs = ReopenRequest.objects.select_related('trip__driver', 'trip__route', 'trip__vehicle', 'reviewed_by')
+        status = self.request.GET.get('status', 'PENDING')
+        if status in {'PENDING', 'APPROVED', 'REJECTED'}:
+            qs = qs.filter(status=status)
+        context.update(page_obj=Paginator(qs, 25).get_page(self.request.GET.get('page')), selected_status=status)
+        return context
+
+    def post(self, request):
+        from .models import ReopenRequest
+        from .services import resolve_reopen
+        from django.core.exceptions import ValidationError as ModelValidationError
+        try:
+            item = get_object_or_404(ReopenRequest, pk=request.POST.get('id'))
+            if request.POST.get('decision') not in {'approve', 'reject'}:
+                raise ModelValidationError('Seleccione aprobar o rechazar.')
+            resolve_reopen(item=item, user=request.user, approve=request.POST['decision'] == 'approve', reason=request.POST.get('reason', ''), request=request)
+        except ModelValidationError as exc:
+            messages.error(request, ' '.join(exc.messages))
+        else:
+            messages.success(request, 'Decisión registrada. El conductor debe sincronizar para recibir el cambio.')
+        return redirect('fleet:reopen_requests')

@@ -88,6 +88,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class VehicleInspectionViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
+    sst_readable = True
     serializer_class = VehicleInspectionSerializer
     permission_classes = [RoleWritePermission]
     write_roles = {User.Role.DRIVER, User.Role.COLLECTOR}
@@ -95,7 +96,7 @@ class VehicleInspectionViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, v
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if not (self.request.user.is_superuser or self.request.user.role in {User.Role.ADMIN, User.Role.SUPERVISOR}):
+        if not (self.request.user.is_superuser or self.request.user.role in {User.Role.ADMIN, User.Role.SUPERVISOR, User.Role.SST}):
             qs = qs.filter(driver=self.request.user)
         return qs
 
@@ -243,6 +244,25 @@ class RouteTripViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewset
         except DjangoValidationError as exc:
             return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(trip).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get", "post"], url_path="reopen-request")
+    def reopen_request(self, request, pk=None):
+        from apps.fleet.models import ReopenRequest
+        from apps.fleet.services import request_reopen
+        trip = self.get_object()
+        if request.user.role not in {User.Role.DRIVER, User.Role.COLLECTOR} or trip.driver_id != request.user.pk:
+            return Response({"detail": "Solo puede consultar o solicitar la reapertura de su recorrido."}, status=403)
+        if request.method == "POST":
+            try:
+                item = request_reopen(trip=trip, user=request.user, reason=str(request.data.get("reason", "")), request=request)
+            except DjangoValidationError as exc:
+                return Response({"detail": exc.messages}, status=400)
+        else:
+            requests = ReopenRequest.objects.filter(trip=trip)
+            if trip.ended_at:
+                requests = requests.filter(closed_at=trip.ended_at)
+            item = requests.first()
+        return Response({"status": item.status if item else None, "resolution": item.resolution if item else ""})
 
     @action(detail=True, methods=["post"])
     @transaction.atomic
